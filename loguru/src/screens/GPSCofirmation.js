@@ -60,7 +60,6 @@ const handleYes = async () => {
       const days = route.params?.days || 1;
       gpsData = Array.from({ length: days }, (_, index) => ({
         day: index + 1,
-        // GPSデータをString型に変換する
         timestamp: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString(),
         coordinates: {
           latitude:
@@ -71,6 +70,31 @@ const handleYes = async () => {
             (Math.random() - 0.5) * KYOTO_COORDINATES.longitudeOffset,
         },
       }));
+      
+      // 重複を排除
+      gpsData = Array.from(
+        new Set(
+          gpsData.map(
+            (point) =>
+              `${point.coordinates.latitude},${point.coordinates.longitude},${point.timestamp}`
+          )
+        )
+      ).map((uniqueKey) => {
+        const [latitude, longitude, timestamp] = uniqueKey.split(",");
+        return {
+          day: gpsData.find(
+            (point) =>
+              point.coordinates.latitude === parseFloat(latitude) &&
+              point.coordinates.longitude === parseFloat(longitude) &&
+              point.timestamp === timestamp
+          ).day,
+          timestamp,
+          coordinates: {
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+          },
+        };
+      });      
     }
 
     //GPSデータ確認

@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Image, PanResponder, Animated, TextInput, ScrollView, Modal, Alert, FlatList } from 'react-native';
+import { View,TouchableOpacity, Text, Image, PanResponder, Animated, TextInput, ScrollView, Modal, Alert, FlatList } from 'react-native';
 import { X, Plus, AlignLeft, UserPlus, Layout, Camera, Save, Type, Bold, Italic, Underline, AlignCenter, AlignRight, Palette, Trash2, ChevronDown } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import io from 'socket.io-client';
 import { useCallback } from 'react';
+import styles from './CSS/LogCreationStyle.js';
+import { useNavigation } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+
+
 //ドラッグ処理
 const DraggableElement = ({ children, id, initialX = 0, initialY = 0, onDragEnd, onPress, onLongPress }) => {
   const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
@@ -342,6 +347,54 @@ const OtherUsersPreview = ({ users }) => (
     ))}
   </View>
 );
+
+const MemberPermissionModal = ({ visible, onClose, onSave, members }) => {
+  const [selectedMembers, setSelectedMembers] = useState([]);
+
+  const handleSave = () => {
+    onSave(selectedMembers);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>編集権限を付与するメンバーを選択</Text>
+          <FlatList
+            data={members}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.memberItem}
+                onPress={() => {
+                  if (selectedMembers.includes(item)) {
+                    setSelectedMembers(selectedMembers.filter(member => member !== item));
+                  } else {
+                    setSelectedMembers([...selectedMembers, item]);
+                  }
+                }}
+              >
+                <Text style={styles.memberName}>{item.name}</Text>
+                {selectedMembers.includes(item) && (
+                  <Text style={styles.selectedIndicator}>✓</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            keyExtractor={item => item.id}
+          />
+          <View style={styles.modalButtons}>
+            <TouchableOpacity onPress={onClose} style={[styles.modalButton, styles.cancelButton]}>
+              <Text style={styles.cancelButtonText}>キャンセル</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSave} style={[styles.modalButton, styles.saveButton]}>
+              <Text style={styles.saveButtonText}>保存</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 //メイン処理・マーカーの情報取得
 export default function LogCreation({ marker, onClose }) {
   const [fabOpen, setFabOpen] = useState(false);
@@ -349,6 +402,9 @@ export default function LogCreation({ marker, onClose }) {
   const [editingElement, setEditingElement] = useState(null);
   const [showTextInputModal, setShowTextInputModal] = useState(false);
   const [newTextPosition, setNewTextPosition] = useState({ x: 0, y: 0 });
+  const navigation = useNavigation();
+  const [showMemberPermissionModal, setShowMemberPermissionModal] = useState(false);
+  const [ membersWithEditPermissions, setMembersWithEditPermissions] = useState([]);
 
   const defaultTextFormat = {
     fontFamily: 'System',
@@ -398,6 +454,7 @@ export default function LogCreation({ marker, onClose }) {
         pickImage();
         break;
       case 'user':
+        setShowMemberPermissionModal(true);
         console.log('ユーザー追加');
         break;
       case 'layout':
@@ -510,14 +567,15 @@ export default function LogCreation({ marker, onClose }) {
               source={{ uri: element.content }}
               style={styles.draggableImage}
             />
-          </DraggableElement>   
+          </DraggableElement>
           );
       default:
         return null;
     }
   };
 
-  //テキスト入力モーダル
+
+  //モーダル関係
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -578,319 +636,21 @@ export default function LogCreation({ marker, onClose }) {
         onSave={handleSaveText}
         onDelete={() => editingElement && deleteElement(editingElement.id)}
       />
+      <MemberPermissionModal
+        visible={showMemberPermissionModal}
+        onClose={() => setShowMemberPermissionModal(false)}
+        onSave={(selectedMembers) => {
+          console.log('編集権限を付与されたメンバー:', selectedMembers);
+          setMembersWithEditPermission(selectedMembers);
+          setShowMemberPermissionModal(false);
+          // ここで選択されたメンバーの処理を行います（例：サーバーに送信など）
+        }}
+        members={marker ? marker.members : []}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  toolbarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 12,
-  },
-  toolbarGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#e9ecef',
-    paddingRight: 8,
-    marginRight: 8,
-  },
-  toolbarButton: {
-    padding: 8,
-    borderRadius: 4,
-    marginHorizontal: 2,
-  },
-  deleteButton: {
-    padding: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff1f0',
-  },
-  colorPickerContainer: {
-    padding: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  colorPickerLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-    color: '#666',
-  },
-  previewContainer: {
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    marginBottom: 12,
-    minHeight: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewText: {
-    fontSize: 16,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    minHeight: 120,
-    backgroundColor: '#fff',
-    fontSize: 16,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    minWidth: 100,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  saveButton: {
-    backgroundColor: '#C1A14E',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  otherUsersContainer: {
-    marginTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    paddingTop: 16,
-  },
-  otherUserPreview: {
-    marginBottom: 8,
-  },
-  otherUserName: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  otherUserText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  deleteButton: {
-    padding: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff1f0',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: 'hidden',
-  },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#333',
-    padding: 16,
-    borderRadius: 28,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  fabOptions: {
-    position: 'absolute',
-    right: 16,
-    bottom: 80,
-    alignItems: 'center',
-  },
-  fabOption: {
-    backgroundColor: '#555',
-    padding: 12,
-    borderRadius: 24,
-    marginBottom: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  draggable: {
-    position: 'absolute',
-    padding: 8,
-  },
-  draggableText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  draggableImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 8,
-  },
-  toolbar: {
-    flexDirection: 'row',
-    padding: 8,
-    backgroundColor: '#f0f0f0',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  toolbarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginHorizontal: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 4,
-    padding: 8,
-    marginVertical: 16,
-    minHeight: 100,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  modalButton: {
-    marginLeft: 16,
-    padding: 8,
-  },
-  colorPicker: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 8,
-  },
-  colorOption: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-
-  fontSizeSelector: {
-    position: 'relative',
-    marginHorizontal: 8,
-  },
-  fontSizeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  fontSizeButtonText: {
-    fontSize: 16,
-    marginRight: 4,
-  },
-  fontSizeModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  fontSizeDropdownContainer: {
-    position: 'absolute',
-    top: '20%',
-    left: '10%',
-    right: '10%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    maxHeight: '60%',
-  },
-  fontSizeDropdown: {
-    padding: 8,
-  },
-  fontSizeOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  fontSizeOptionText: {
-    color: '#333',
-    textAlign: 'center',
-  },
-  memberChip: {
-    backgroundColor: '#C1A14E',
-    borderRadius:16,
-    paddingVertical: 4,
-    paddingHorizonal: 8,
-  },
-  memberChipText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-});
 
 //デバウンス処理
 const debounce = (func, wait) => {
