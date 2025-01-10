@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+
 export default function MemberSelect({ navigation, route }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMembers, setSelectedMembers] = useState([]);
@@ -43,9 +44,16 @@ export default function MemberSelect({ navigation, route }) {
 
   const handleConfirm = () => {
     if (route.params?.onMembersSelected) {
-      route.params.onMembersSelected(selectedMembers);
+      route.params.onMembersSelected(selectedMembers); // 選択されたメンバーを親に渡す
     }
-    navigation.goBack();
+
+    if (route.params?.redirectTo === 'NewCreate') {
+      navigation.navigate('NewCreate'); // NewCreate.jsに遷移
+    } else if (route.params?.redirectTo === 'LogCreation') {
+      navigation.navigate('LogCreation'); // LogCreation.jsに遷移
+    } else {
+      navigation.goBack(); // デフォルトでモーダルを閉じる
+    }
   };
 
   return (

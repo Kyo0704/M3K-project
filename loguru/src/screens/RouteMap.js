@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
-  StyleSheet,
   TouchableOpacity,
   Alert,
   Text,
@@ -14,24 +13,26 @@ import { Navigation, MapPin, Trash2, Plus } from "lucide-react-native";
 import { useRoute } from "@react-navigation/native";
 import mapStyle from "./raw/map_style.json";
 import LogCreation from "./LogCreation";
+import styles from "./CSS/RouteMapStyle";
 
 export default function RouteMap() {
-  const route = useRoute();
-  const mapRef = useRef(null);
+  const route = useRoute(); // ルート情報を取得
+  const mapRef = useRef(null); // MapViewの参照を保持
 
-  const { gpsData, initialRegion: passedRegion } = route.params;
+  const { gpsData, initialRegion: passedRegion } = route.params; // ルートから渡されたパラメータを取得
 
-  const [markers, setMarkers] = useState([]);
-  const [routeCoordinates, setRouteCoordinates] = useState([]);
-  const [selectedMarker, setSelectedMarker] = useState(null);
-  const [isAddingPin, setIsAddingPin] = useState(false);
-  const [newMarkerTitle, setNewMarkerTitle] = useState("");
-  const [showNewMarkerInput, setShowNewMarkerInput] = useState(false);
-  const [newMarkerCoordinate, setNewMarkerCoordinate] = useState(null);
-  const [initialRegion, setInitialRegion] = useState(null);
-  const [showLogCreation, setShowLogCreation] = useState(false);
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [markerToNavigate, setMarkerToNavigate] = useState(null);
+  // 各種状態を管理
+  const [markers, setMarkers] = useState([]); // マーカーのリスト
+  const [routeCoordinates, setRouteCoordinates] = useState([]); // ルートの座標
+  const [selectedMarker, setSelectedMarker] = useState(null); // 選択されたマーカー
+  const [isAddingPin, setIsAddingPin] = useState(false); // ピン追加モードのフラグ
+  const [newMarkerTitle, setNewMarkerTitle] = useState(""); // 新しいマーカーのタイトル
+  const [showNewMarkerInput, setShowNewMarkerInput] = useState(false); // 新しいマーカー入力の表示フラグ
+  const [newMarkerCoordinate, setNewMarkerCoordinate] = useState(null); // 新しいマーカーの座標
+  const [initialRegion, setInitialRegion] = useState(null); // 初期表示の地図領域
+  const [showLogCreation, setShowLogCreation] = useState(false); // ログ作成モーダルの表示フラグ
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false); // 確認モーダルの表示フラグ
+  const [markerToNavigate, setMarkerToNavigate] = useState(null); // ナビゲートするマーカー
 
   // 永続化されたマーカーをロード
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function RouteMap() {
         let loadedMarkers = storedMarkers ? JSON.parse(storedMarkers) : [];
 
         if (gpsData) {
+          // GPSデータからルート座標とマーカーを生成
           const routeCoords = gpsData.map((point) => ({
             latitude: point.coordinates.latitude,
             longitude: point.coordinates.longitude,
@@ -60,6 +62,7 @@ export default function RouteMap() {
           setRouteCoordinates(routeCoords);
 
           if (routeCoords.length > 0) {
+            // 初期表示の地図領域を設定
             setInitialRegion({
               latitude: routeCoords[0].latitude,
               longitude: routeCoords[0].longitude,
@@ -67,7 +70,7 @@ export default function RouteMap() {
               longitudeDelta: 0.02,
             });
           }
-          // 重複を排除
+          // 重複を排除してマーカーを設定
           const allMarkers = [...loadedMarkers, ...markersData];
           const uniqueMarkers = Array.from(
             new Map(allMarkers.map((marker) => [marker.id, marker])).values()
@@ -110,6 +113,7 @@ export default function RouteMap() {
     }
   };
 
+  // 確認モーダルの応答を処理
   const handleConfirmationResponse = (proceed) => {
     setShowConfirmationModal(false);
     if (proceed && markerToNavigate) {
@@ -118,11 +122,13 @@ export default function RouteMap() {
     }
   };
 
+  // マーカーが押されたときの処理
   const handleMarkerPress = (marker) => {
     setSelectedMarker(marker); // マーカーを選択
     setShowConfirmationModal(true); // 作成確認モーダルを表示
   };
 
+  // 地図が押されたときの処理
   const handleMapPress = (event) => {
     if (isAddingPin) {
       setNewMarkerCoordinate(event.nativeEvent.coordinate);
@@ -156,6 +162,7 @@ export default function RouteMap() {
     }
   };
 
+  // 地図を中心に合わせる
   const centerMap = () => {
     if (mapRef.current && routeCoordinates.length > 0) {
       mapRef.current.fitToCoordinates(routeCoordinates, {
@@ -165,6 +172,7 @@ export default function RouteMap() {
     }
   };
 
+  // ピン追加モードを切り替え
   const toggleAddPin = () => {
     setIsAddingPin(!isAddingPin);
   };
@@ -177,7 +185,6 @@ export default function RouteMap() {
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         onPress={handleMapPress} // 選択解除とピン追加の処理
-        //onPress={() => setSelectedMarker(null)} // マップタップで選択解除
         initialRegion={initialRegion}
       >
         {markers.map((marker) => (
@@ -278,114 +285,3 @@ export default function RouteMap() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  map: {
-    flex: 1,
-  },
-  centerButton: {
-    position: "absolute",
-    right: 16,
-    bottom: 16,
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  addPinButton: {
-    position: "absolute",
-    right: 16,
-    bottom: 80,
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  activeButton: {
-    backgroundColor: "#C1A14E",
-  },
-  deleteButton: {
-    position: "absolute",
-    left: 16,
-    bottom: 16,
-    backgroundColor: "#ff4136",
-    padding: 12,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  addPinMessage: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    padding: 8,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  newMarkerInput: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    borderRadius: 8,
-    padding: 8,
-    elevation: 4,
-  },
-  input: {
-    flex: 1,
-    marginRight: 8,
-    padding: 8,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 4,
-  },
-  addButton: {
-    backgroundColor: "#C1A14E",
-    padding: 8,
-    borderRadius: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "80%",
-  },
-  cancelButton: {
-    padding: 10,
-    backgroundColor: "#ccc",
-    borderRadius: 5,
-  },
-  cancelButtonText: {
-    color: "#333",
-  },
-  continueButton: {
-    padding: 10,
-    backgroundColor: "#4CAF50",
-    borderRadius: 5,
-  },
-  continueButtonText: {
-    color: "#fff",
-  },
-});

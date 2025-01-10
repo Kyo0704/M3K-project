@@ -337,6 +337,45 @@ const styles = StyleSheet.create({
       color: '#fff',
       fontSize: 14,
     },
+    container: {
+      flex: 1,
+      backgroundColor: '#fff',
+      padding: 20,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    addMemberButton: {
+      backgroundColor: '#C1A14E',
+      padding: 10,
+      borderRadius: 5,
+      marginTop: 20,
+      alignItems: 'center',
+    },
+    addMemberButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: 'bold',
+    },
+    memberList: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 10,
+    },
+    memberChip: {
+      backgroundColor: '#ddd',
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      margin: 5,
+    },
+    memberChipText: {
+      color: '#333',
+      fontSize: 14,
+    },
   });
   
   export default styles;
