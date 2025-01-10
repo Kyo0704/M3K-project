@@ -39,7 +39,9 @@ import { useCallback } from "react";
 import styles from "./CSS/LogCreationStyle.js"; // スタイルシートをインポート
 import { useNavigation } from "@react-navigation/native"; // ナビゲーションフックをインポート
 import MemberSelect from "./MemberSelect.js"; // メンバー選択コンポーネントをインポート
-import AsyncStorage from "@react-native-async-storage/async-storage"; //AsyncStorageをインポート
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
 // ドラッグ可能な要素のコンポーネント
 const DraggableElement = ({
   children,
@@ -54,8 +56,6 @@ const DraggableElement = ({
   const pan = useRef(
     new Animated.ValueXY({ x: initialX, y: initialY })
   ).current;
-  const scale = useRef(new Animated.Value(1)).current; //要素の拡大縮小を管理するためのref
-  const rotation = useRef(new Animated.Value(0)).current; //要素の回転を管理するためのref
   const [isDragging, setIsDragging] = useState(false); // ドラッグ中かどうかの状態
   const dragThreshold = 5; // ドラッグと判定する閾値
 
@@ -70,30 +70,19 @@ const DraggableElement = ({
       });
     },
     onPanResponderMove: (_, gestureState) => {
-      if (gestureState.numberActiveTouches === 2) {
-        // 2本指でドラッグした場合
-        const dx = gestureState.moveX - gestureState.x0; // ドラッグのX方向の移動量
-        const dy = gestureState.moveY - gestureState.y0; //ドラッグのY方向の移動量
-        const distance = Math.sqrt(dx * dx + dy * dy); // ドラッグの距離を計算
-        scale.setValue(1 + distance / 100); // 距離に応じて拡大縮小
-
-        const angle = Math.atan2(dy, dx); // ドラッグの角度を計算
-        rotation.setValue(angle); // 角度に応じて回転
-      } else {
-        // ドラッグの閾値を超えたらドラッグ中と判定
-        if (
-          Math.abs(gestureState.dx) > dragThreshold ||
-          Math.abs(gestureState.dy) > dragThreshold
-        ) {
-          setIsDragging(true);
-        }
-        // ドラッグ中の位置を更新
-        Animated.event([null, { dx: pan.x, dy: pan.y }], {
-          useNativeDriver: false,
-        })(evt, gestureState);
+      // ドラッグの閾値を超えたらドラッグ中と判定
+      if (
+        Math.abs(gestureState.dx) > dragThreshold ||
+        Math.abs(gestureState.dy) > dragThreshold
+      ) {
+        setIsDragging(true);
       }
+      // ドラッグ中の位置を更新
+      Animated.event([null, { dx: pan.x, dy: pan.y }], {
+        useNativeDriver: false,
+      })(_, gestureState);
     },
-    onPanResponderRelease: () => {
+    onPanResponderRelease: (_, gestureState) => {
       pan.flattenOffset(); // オフセットをリセット
       if (isDragging) {
         onDragEnd({ id, x: pan.x._value, y: pan.y._value }); // ドラッグ終了時の処理
@@ -111,19 +100,7 @@ const DraggableElement = ({
       {...panResponder.panHandlers} // パンレスポンダーをバインド
       style={[
         styles.draggable,
-        {
-          transform: [
-            { translateX: pan.x },//X方向の移動
-            { translateY: pan.y },
-            { scale: scale },
-            {
-              rotate: rotation.interpolate({
-                inputRange: [-Math.PI, Math.PI],//回転の範囲
-                outputRange: ["-180deg", "180deg"],//回転の範囲
-              }),
-            },
-          ],
-        },
+        { transform: [{ translateX: pan.x }, { translateY: pan.y }] },
       ]}
     >
       {children}
@@ -134,7 +111,8 @@ const DraggableElement = ({
 // フォントサイズ選択コンポーネント
 const FontSizeSelector = ({ currentSize, onSizeChange }) => {
   const [isOpen, setIsOpen] = useState(false); // ドロップダウンの開閉状態
-  const fontSizes = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40];
+  const fontSizes = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40]; // 選択可能なフォントサイズ
+
   return (
     <View style={styles.fontSizeSelector}>
       <TouchableOpacity
@@ -488,17 +466,6 @@ const OtherUsersPreview = ({ users }) => (
   </View>
 );
 
-const saveElement = async () => {
-  try {
-    const jsonValue = JSON.stringify(elements); // 要素をJSON形式に変換
-    await AsyncStorage.setItem("@elements", jsonValue); //ローカルストレージに保存
-    Alert.alert("保存完了", "ログが保存されました"); // 保存完了メッセージを表示
-  } catch (e) {
-    console.error(e); // エラーをログに出力
-    Alert.alert("保存失敗", "ログの保存に失敗しました"); // 保存失敗メッセージを表示
-  }
-};
-
 // メイン処理・マーカーの情報取得
 export default function LogCreation({ marker, onClose }) {
   const [fabOpen, setFabOpen] = useState(false); // FABの開閉状態
@@ -519,6 +486,20 @@ export default function LogCreation({ marker, onClose }) {
   const handleSaveMembers = (selectedMembers) => {
     setMembersWithPermissions(selectedMembers); // 選択されたメンバーを保存
     setShowMemberModal(false); // モーダルを閉じる
+  };
+
+  const saveLogData = async () => {
+    try {
+      const logData = {
+        elements,
+        membersWithPermissions,
+      };
+      // AsyncStorageを使用してデータを保存
+      await AsyncStorage.setItem('logData', JSON.stringify(logData));
+      Alert.alert("保存完了", "情報が正常に保存されました。");
+    } catch (error) {
+      Alert.alert("保存エラー", "情報の保存中にエラーが発生しました。");
+    }
   };
 
   // デフォルトのテキストフォーマット
@@ -555,20 +536,6 @@ export default function LogCreation({ marker, onClose }) {
       ]);
     }
   }, [marker]);
-
-  useEffect(() => {
-    const loadElements = async () => {
-      try {
-        const jsonValue = await AsyncStorage.getItem("@elements"); //ローカルストレージから要素を取得
-        if (jsonValue !== null) {
-          setElements(JSON.parse(jsonValue)); // 取得した要素を状態に設定
-        }
-      } catch (e) {
-        console.error(e); // エラーをログに出力
-      }
-    };
-    loadElements();
-  }, []);
 
   // 画像アップロード
   const pickImage = async () => {
@@ -607,8 +574,8 @@ export default function LogCreation({ marker, onClose }) {
         console.log("レイアウト追加");
         break;
       case "save":
-        saveElement();
         console.log("保存");
+        saveLogData();
         onClose(); // 画面を閉じる
         break;
       default:
