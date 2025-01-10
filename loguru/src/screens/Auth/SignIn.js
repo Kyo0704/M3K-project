@@ -1,16 +1,20 @@
+/**
+ * ファイル名：SignIn.js
+ * 画面名：サインイン
+ */
+
 import { Image, View, Text, TextInput, Button, ImageBackground, ScrollView, StyleSheet, Pressable } from "react-native"
 import React, { useState } from "react"
 import { useNavigation } from "@react-navigation/native";
 import '@/global.css'
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 export default function SignIn() {
-  const [userName, setUserName] = useState('')  // ユーザーネーム入力値格納用
-  const [password, setPassword] = useState('')  // パスワード入力値格納用
-  const [errorAllItemsFlag, setErrorAllItemsFlag] = useState(false)  // 必須入力項目エラーフラグ
-  const [errorPassFlag, setErrorPassFlag] = useState(false)  // パスワードエラーフラグ
+  const [userName, setUserName] = useState('')  // ユーザーネーム
+  const [password, setPassword] = useState('')  // パスワード
+  const [errorAllItemsFlag, setErrorAllItemsFlag] = useState(false)  // 必須項目入力フラグ
   const [errorProcessFlag, setErrorProcessFlag] = useState(false) // API処理エラー用
-  let isRequireItem = false
   const navigation = useNavigation()
 
   // スタイルシートの定義
@@ -27,20 +31,15 @@ export default function SignIn() {
     // すべての項目に対して入力されているかのチェック
     if (userName == '' || password == '') {
       setErrorAllItemsFlag(true)
-      isRequireItem = false
     } else {
       setErrorAllItemsFlag(false)
-      isRequireItem = true
-    }
-
-    // バリデーションチェックが成功したらsendSignIn()へ
-    if (isRequireItem) {
       sendSignIn()
     }
   }
 
-  // サインアップ情報送信
+  // サインイン情報送信
   const sendSignIn = async () => {
+    onLoginSuccess()  // テスト用（実際には削除する）
     try {
       const data = { userName: userName, password: password }
       const response = await fetch('/api/sign-in', {
@@ -53,19 +52,31 @@ export default function SignIn() {
 
       if (response.ok) {
         setErrorProcessFlag(false)
+        onLoginSuccess()
       } else {
-        console.error("データベースの処理でエラー")
+        console.error("API処理に失敗しました：", response.status)
         setErrorProcessFlag(true)
       }
     } catch (error) {
-      console.log(error)
+      console.error("サインイン処理に失敗", error)
       setErrorProcessFlag(true)
+    }
+  }
+
+  // ログイン処理が成功したときの処理
+  const onLoginSuccess = async () => {
+    // AsyncStorageにユーザー情報を格納し、メインタブに遷移
+    try {
+      await AsyncStorage.setItem("userId", "1")  // （テスト用）実際にはバックエンドから返ってくるuser_idを格納
+      navigation.navigate('MainTabs')
+    } catch (error) {
+      console.error("AsyncStorageエラー", error)
     }
   }
 
   // サインアップページへの遷移処理
   const gotoSignUp = () => {
-    navigation.navigate('SignUp') 
+    navigation.navigate('SignUp')
   }
 
   // サインアップフォームエラー表示
@@ -74,12 +85,6 @@ export default function SignIn() {
       return (
         <View className="bg-white/50 p-2 rounded-lg w-80 mt-3">
           <Text className="text-red-500 font-bold">※すべての項目を入力してください。</Text>
-        </View>
-      )
-    } else if (errorPassFlag) {
-      return (
-        <View className="bg-white/50 p-2 rounded-lg w-80 mt-3">
-          <Text className="text-red-500 font-bold">パスワードと確認用パスワードを一致させてください。</Text>
         </View>
       )
     } else if (errorProcessFlag) {

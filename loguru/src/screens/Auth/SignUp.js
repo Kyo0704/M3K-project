@@ -1,20 +1,25 @@
+/**
+ * ファイル名：SignUp.js
+ * 画面名：サインアップ
+ */
+
 import { Image, StyleSheet, View, Text, TextInput, Button, ImageBackground, ScrollView, Pressable } from "react-native"
 import React, { useState } from "react"
-import { Link } from "expo-router";
 import '@/global.css'
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 export default function SignUp() {
-  const [userName, setUserName] = useState('')  // ユーザーネーム入力値格納用
-  const [email, setEmail] = useState('')  // メールアドレス入力値格納用
-  const [password, setPassword] = useState('')  // パスワード入力値格納用
-  const [confirmPassword, setConfirmPassword] = useState('')  // 確認用パスワード入力値格納用
-  const [errorAllItemsFlag, setErrorAllItemsFlag] = useState(false)  // 必須入力項目エラーフラグ
+  const [userName, setUserName] = useState('')  // ユーザーネーム
+  const [email, setEmail] = useState('')  // メールアドレス
+  const [password, setPassword] = useState('')  // パスワード
+  const [confirmPassword, setConfirmPassword] = useState('')  // 確認用パスワード
+  const [errorAllItemsFlag, setErrorAllItemsFlag] = useState(false)  // 必須項目エラーフラグ
   const [errorPassFlag, setErrorPassFlag] = useState(false)  // パスワードエラーフラグ
-  const [errorProcessFlag, setErrorProcessFlag] = useState(false) // API処理エラー用
-  let isRequireItem = false  // 必須アイテム入力確認フラグ true:入力済 false:未入力
-  let isMatchPassword = false  // パスワード一致確認フラグ true:一致 false:不一致
+  const [errorProcessFlag, setErrorProcessFlag] = useState(false)  // API処理エラーフラグ
+  let isRequireItem = false  // 必須アイテム入力フラグ
+  let isMatchPassword = false  // パスワード一致フラグ
   const navigation = useNavigation()
 
   // スタイルシートの定義
@@ -53,8 +58,9 @@ export default function SignUp() {
 
   // サインアップ情報送信
   const sendSignUp = async () => {
+    onLoginSuccess()  // テスト用（実際には削除）
     try {
-      const data = { userName: userName, email: email, password: password, confirmPassword: confirmPassword }
+      const data = { userName: userName, email: email, password: password}
       const response = await fetch('/api/sign-up', {
         method: 'POST',
         headers: {
@@ -64,16 +70,31 @@ export default function SignUp() {
       });
 
       if (response.ok) {
+        console.errro("サインアップ処理に成功")
         setErrorProcessFlag(false)
       } else {
+        console.error("API処理に失敗しました：", response.status)
         setErrorProcessFlag(true)
       }
     } catch (error) {
-      console.log(error)
+      console.error("サインアップ処理に失敗：", error)
       setErrorProcessFlag(true)
     }
   }
 
+  // ログイン処理が成功したときの処理
+  const onLoginSuccess = async () => {
+    // AsyncStorageにユーザー情報を格納し、メインタブに遷移
+    try {
+      await AsyncStorage.setItem("userId", "1")  // (テスト用)実際にはバックエンドから返されるuser_idを格納
+      navigation.navigate('MainTabs')
+    } catch (error) {
+      console.error('Error write data:', error)
+      console.error("AsyncStorageエラー：", error)
+    }
+  }
+
+  // サインインページに遷移する
   const gotoSignIn = () => {
     navigation.navigate('SignIn')
   }

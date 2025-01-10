@@ -1,28 +1,72 @@
+/**
+ * ファイル名：Home.js
+ * 画面名：ホーム画面
+ */
+
 import { Marquee } from "@animatereactnative/marquee";
-import { useEffect, useState } from "react";
-import { View, ImageBackground, StyleSheet, Dimensions, Image, Text, ScrollView, Pressable } from "react-native";
-import { Link } from "expo-router";
-import { useNavigation } from '@react-navigation/native';
+import { useState } from "react";
+import { View, ImageBackground, StyleSheet, Dimensions, Image, Text, ScrollView } from "react-native";
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback } from 'react';
 import "@/global.css"
-import '@/App'
 
 export default function Home() {
-  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);
+  const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);  // 画面幅を取得
+  const [homeLogData, setHomeLogData] = useState()  // ホーム画面に表示するログデータ
   const navigation = useNavigation();
 
-  // ヘッダー画像表示用
-  useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window: { width } }) => {
-      setScreenWidth(width);
-    });
-    return () => {
-      subscription.remove();
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        await checkLogin()
+        await getHomeLogData()
+      })()
+      const subscription = Dimensions.addEventListener('change', ({ window: { width } }) => {
+        setScreenWidth(width);
+      });
 
-  // 
-  const gotoSign = () => {
-    navigation.navigate('SignIn')
+      return () => {
+        subscription.remove();
+      };
+    }, [])
+  );
+
+  // ホーム画面に表示するログの取得
+  const getHomeLogData = async () => {
+    try {
+      let url = new URL('http://10.108.1.128:3000/homeLog')
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        try {
+          const data = await response.json()
+          setHomeLogData(data)
+        } catch (error) {
+          console.error("JSONのパースに失敗:", error)
+        }
+      } else {
+        console.error("レスポンスエラー:", response.status)
+      }
+    } catch (error) {
+      console.error("fetch処理でエラー：", error)
+    }
+  }
+
+  // ログインチェック
+  const checkLogin = async () => {
+    try {
+      const value = await AsyncStorage.getItem("userId");
+      if (value == null) {
+        navigation.navigate('SignIn');
+      }
+    } catch (error) {
+      console.error("AsyncStorageエラー：", error)
+    }
   }
 
   // スタイルの定義
@@ -41,7 +85,7 @@ export default function Home() {
   })
 
   return (
-    <View>
+    <View className="bg-white w-screen h-screen">
       <ScrollView>
         {/* ヘッダー */}
         <View>
@@ -57,55 +101,39 @@ export default function Home() {
             />
           </ImageBackground>
         </View>
-        <View className="mt-5">
-          <Pressable onPress={gotoSign}>
-            {/* <Link className="bg-blue-500 text-white text-center font-bold py-3" href="/user/SignUp">サインアップページへ</Link> */}
-            <Text className="bg-blue-500 text-white text-center font-bold py-3">サインアップページへ</Text>
-          </Pressable>
-        </View>
         {/* マルキーの表示 */}
         <Marquee speed={0.3}>
           <View className="flex flex-row">
-            <View className="w-36 mt-16 mx-4">
-              <ImageBackground
-                source={require("@/assets/sample-log-img.png")}
-                style={styles.log_img}
-              ><View className="flex-1 flex-col items-end justify-end mb-2 mr-1">
-                  <Text className="bg-white/75 px-2 py-1 rounded-md text-xs">log その１</Text>
-                </View>
-              </ImageBackground>
-            </View>
-            <View className="w-36 h-64 mt-16 mx-4">
-              <ImageBackground
-                source={require("@/assets/sample-log-img.png")}
-                style={styles.log_img}
-              ><View className="flex-1 flex-col items-end justify-end mb-2 mr-1">
-                  <Text className="bg-white/75 px-2 py-1 rounded-md text-xs">log その２</Text>
-                </View>
-              </ImageBackground>
-            </View>
+            {homeLogData && Object.values(homeLogData).map((e, index) => (
+              <View className="w-36 h-64 mt-8 mx-4" key={index}>
+                <ImageBackground
+                  source={{ uri: e.thumbnail }}
+                  className="w-full h-full"
+                  imageStyle={{ borderRadius: 10 }}
+                  style={{ resizeMode: 'contain' }}
+                ><View className="flex-1 flex-col items-end justify-end mb-2 mr-1">
+                    <Text className="bg-white/75 px-2 py-1 rounded-md text-xs">{e.title}</Text>
+                  </View>
+                </ImageBackground>
+              </View>
+            ))}
           </View>
         </Marquee>
         <Marquee reverse={true} speed={0.3}>
           <View className="flex flex-row">
-            <View className="w-36 h-64 mt-16 mx-4">
-              <ImageBackground
-                source={require("@/assets/sample-log-img.png")}
-                style={styles.log_img}
-              ><View className="flex-1 flex-col items-end justify-end mb-2 mr-1">
-                  <Text className="bg-white/75 px-2 py-1 rounded-md text-xs">log その３</Text>
-                </View>
-              </ImageBackground>
-            </View>
-            <View className="w-36 h-64 mt-16 mx-4">
-              <ImageBackground
-                source={require("@/assets/sample-log-img.png")}
-                style={styles.log_img}
-              ><View className="flex-1 flex-col items-end justify-end mb-2 mr-1">
-                  <Text className="bg-white/75 px-2 py-1 rounded-md text-xs">log その４</Text>
-                </View>
-              </ImageBackground>
-            </View>
+            {homeLogData && Object.values(homeLogData).map((e, index) => (
+              <View className="w-36 h-64 mt-8 mx-4" key={index}>
+                <ImageBackground
+                  source={{ uri: e.thumbnail }}
+                  className="w-full h-full"
+                  imageStyle={{ borderRadius: 10 }}
+                  style={{ resizeMode: 'contain' }}
+                ><View className="flex-1 flex-col items-end justify-end mb-2 mr-1">
+                    <Text className="bg-white/75 px-2 py-1 rounded-md text-xs">{e.title}</Text>
+                  </View>
+                </ImageBackground>
+              </View>
+            ))}
           </View>
         </Marquee>
       </ScrollView>

@@ -6,9 +6,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import Home from './src/screens/Home';
-import Account from './src/screens/Account';
+import Account from './src/screens/Account/Account';
+import AccountDetails from './src/screens/Account/AccountDetails'
 import LogeCreate from './src/screens/LogeCreate';
-import Photo from './src/screens/Photo';
+import Photo from './src/screens/Photo/Photo';
 import LogeView from './src/screens/LogeView';
 import NewCreate from './src/screens/NewCreate';
 import CalendarScreen from './src/screens/Calendar';
@@ -16,8 +17,14 @@ import MemberSelect from './src/screens/MemberSelect';
 import GPSConfirmation from './src/screens/GPSCofirmation';
 import RouteMap from './src/screens/RouteMap';
 import LogCreation from './src/screens/LogCreation';
-import SignIn from './src/screens/user/SignIn';
-import SignUp from './src/screens/user/SignUp';
+import SignIn from './src/screens/Auth/SignIn';
+import SignUp from './src/screens/Auth/SignUp';
+import PhotoUpload from './src/screens/Photo/PhotoUpload'
+import ChangeUserName from './src/screens/Account/ChangeUserName'
+import ChangePassword from './src/screens/Account/ChangePassword'
+import ChangeEmail from './src/screens/Account/ChangeEmail'
+import CheckEmail from './src/screens/Account/CheckEmail'
+import CreateNewPassword from './src/screens/Account/CreateNewPassword';
 
 // Navigators
 const Stack = createStackNavigator();
@@ -78,11 +85,72 @@ function HomeStack() {
   );
 }
 
+// PhotoStackの定義
+function PhotoStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Photo"
+        component={Photo}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PhotoUpload"
+        component={PhotoUpload}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  )
+}
+
+// AccountStackの定義
+function AccountStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Account"
+        component={Account}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AccountDetails"
+        component={AccountDetails}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangeUserName"
+        component={ChangeUserName}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePassword}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangeEmail"
+        component={ChangeEmail}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="CheckEmail"
+        component={CheckEmail}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="CreateNewPassword"
+        component={CreateNewPassword}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  )
+}
+
 // タブナビゲーションの定義
 function TabNavigator() {
   return (
     <Tab.Navigator
-      initialRouteName="Home"
+      initialRouteName="HomeTab"
       screenOptions={{
         headerStyle: {
           backgroundColor: '#FFFFFF',
@@ -99,7 +167,7 @@ function TabNavigator() {
       }}
     >
       <Tab.Screen
-        name="Home"
+        name="HomeTab"
         component={HomeStack}
         options={{
           title: 'ホーム',
@@ -109,8 +177,8 @@ function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Account"
-        component={Account}
+        name="AccountStack"
+        component={AccountStack}
         options={{
           title: 'アカウント',
           tabBarIcon: ({ color, size }) => (
@@ -139,8 +207,8 @@ function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="Photo"
-        component={Photo}
+        name="PhotoTab"
+        component={PhotoStack}
         options={{
           title: '写真閲覧',
           tabBarIcon: ({ color, size }) => (
@@ -169,10 +237,10 @@ export default function App() {
           component={SignIn}
           options={{ title: 'サインイン', headerShown: false }}
         />
-        <Stack.Screen 
+        <Stack.Screen
           name="SignUp"
           component={SignUp}
-          options={{ title:'サインアップ', headerShown: false}}
+          options={{ title: 'サインアップ', headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
