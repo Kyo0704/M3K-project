@@ -6,10 +6,10 @@ import { createStackNavigator } from "@react-navigation/stack";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import Home from "./src/screens/Home";
-import Account from "./src/screens/Account";
+import Account from "./src/screens/Account/Account";
 import AccountDetails from './src/screens/Account/AccountDetails'
 import LogeCreate from "./src/screens/LogeCreate";
-import Photo from "./src/screens/Photo";
+import Photo from "./src/screens/Photo.js";
 import LogeView from "./src/screens/LogeView";
 import NewCreate from "./src/screens/NewCreate";
 import CalendarScreen from "./src/screens/Calendar";
@@ -220,10 +220,11 @@ function TabNavigator() {
         }}
       />
       <Tab.Screen
-        name="PhotoTab"
+        name="Photo"
         component={PhotoStack}
         options={{
-          title: '写真閲覧',
+          title: "写真閲覧",
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="camera" color={color} size={size} />
           ),

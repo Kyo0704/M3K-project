@@ -45,7 +45,7 @@ export default function CheckEmail() {
   // ユーザーデータの取得
   const getUserData = async () => {
     try {
-      let url = new URL('http://10.65.10.82:3000/userData')
+      let url = new URL('http://10.108.1.128:3000/userData')
       url.searchParams.append('userId', userId)
       const response = await fetch(url, {
         method: 'GET',
