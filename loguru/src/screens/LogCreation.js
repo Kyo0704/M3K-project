@@ -12,6 +12,7 @@ import {
   Modal,
   Alert,
   FlatList,
+  StyleSheet,
 } from "react-native";
 // アイコンをインポート
 import {
@@ -31,6 +32,7 @@ import {
   Palette,
   Trash2,
   ChevronDown,
+  RotateCw,
 } from "lucide-react-native";
 // 画像ピッカーとWebSocketクライアントをインポート
 import * as ImagePicker from "expo-image-picker";
@@ -39,8 +41,8 @@ import { useCallback } from "react";
 import styles from "./CSS/LogCreationStyle.js"; // スタイルシートをインポート
 import { useNavigation } from "@react-navigation/native"; // ナビゲーションフックをインポート
 import MemberSelect from "./MemberSelect.js"; // メンバー選択コンポーネントをインポート
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import AsyncStorage from "@react-native-async-storage/async-storage"; //非同期ストレージ
+import { PinchGestureHandler, State } from "react-native-gesture-handler"; // ピンチジェスチャーハンドラーをインポート
 
 // ドラッグ可能な要素のコンポーネント
 const DraggableElement = ({
@@ -48,63 +50,130 @@ const DraggableElement = ({
   id,
   initialX = 0,
   initialY = 0,
+  initialRotation = 0, // 初期回転角度
+  initialScale = 1, // 初期スケール
   onDragEnd,
   onPress,
   onLongPress,
+  onRotateEnd, // 回転終了時のコールバック
+  onScaleEnd, // スケール終了時のコールバック
 }) => {
-  // ドラッグ位置を管理するためのref
   const pan = useRef(
     new Animated.ValueXY({ x: initialX, y: initialY })
   ).current;
-  const [isDragging, setIsDragging] = useState(false); // ドラッグ中かどうかの状態
-  const dragThreshold = 5; // ドラッグと判定する閾値
+  const rotation = useRef(new Animated.Value(initialRotation)).current; // 回転角度を管理
+  const scale = useRef(new Animated.Value(initialScale)).current; // スケールを管理
+  const [isDragging, setIsDragging] = useState(false);
+  const [isRotating, setIsRotating] = useState(false); // 回転中かどうかの状態
+  const [lastScale, setLastScale] = useState(initialScale);
+  const [baseScale, setBaseScale] = useState(initialScale);
+  const [pinchCenter, setPinchCenter] = useState({ x: 0, y: 0 });
+  const dragThreshold = 5;
 
-  // パンレスポンダーの設定
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true, // 常にパンレスポンダーを設定
+    onStartShouldSetPanResponder: () => true,
     onPanResponderGrant: () => {
-      setIsDragging(false); // ドラッグ開始時にフラグをリセット
+      setIsDragging(false);
       pan.setOffset({
         x: pan.x._value,
         y: pan.y._value,
       });
     },
     onPanResponderMove: (_, gestureState) => {
-      // ドラッグの閾値を超えたらドラッグ中と判定
       if (
         Math.abs(gestureState.dx) > dragThreshold ||
         Math.abs(gestureState.dy) > dragThreshold
       ) {
         setIsDragging(true);
       }
-      // ドラッグ中の位置を更新
       Animated.event([null, { dx: pan.x, dy: pan.y }], {
         useNativeDriver: false,
       })(_, gestureState);
     },
     onPanResponderRelease: (_, gestureState) => {
-      pan.flattenOffset(); // オフセットをリセット
+      pan.flattenOffset();
       if (isDragging) {
-        onDragEnd({ id, x: pan.x._value, y: pan.y._value }); // ドラッグ終了時の処理
+        onDragEnd({ id, x: pan.x._value, y: pan.y._value });
       } else {
-        onPress(id); // ドラッグでない場合はクリック処理
+        onPress(id);
       }
       setIsDragging(false);
     },
-    onPanResponderTerminationRequest: () => false, // 他のレスポンダーに奪われないようにする
-    onLongPress: () => onLongPress(id), // 長押し時の処理
+    onPanResponderTerminationRequest: () => false,
+    onLongPress: () => onLongPress(id),
   });
 
+  const rotateResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gestureState) => {
+      setIsRotating(true);
+      const angle =
+        Math.atan2(gestureState.dy, gestureState.dx) * (180 / Math.PI);
+      rotation.setValue(angle);
+    },
+    onPanResponderRelease: () => {
+      setIsRotating(false);
+      onRotateEnd({ id, rotation: rotation._value });
+    },
+  });
+
+  const handlePinch = Animated.event(
+    [{ nativeEvent: { scale: scale } }],
+    { useNativeDriver: false }
+  );
+
+  const handlePinchStateChange = (event) => {
+    if (event.nativeEvent.state === State.BEGAN) {
+      const { focalX, focalY } = event.nativeEvent;
+      setPinchCenter({ x: focalX, y: focalY });
+    } else if (event.nativeEvent.state === State.END) {
+      setLastScale(scale._value);
+      onScaleEnd({ id, scale: scale._value });
+    }
+  };
+
   return (
-    <Animated.View
-      {...panResponder.panHandlers} // パンレスポンダーをバインド
-      style={[
-        styles.draggable,
-        { transform: [{ translateX: pan.x }, { translateY: pan.y }] },
-      ]}
+    <PinchGestureHandler
+      onGestureEvent={handlePinch}
+      onHandlerStateChange={handlePinchStateChange}
     >
-      {children}
-    </Animated.View>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.draggable,
+          {
+            transform: [
+              { translateX: pan.x },
+              { translateY: pan.y },
+              {
+                rotate: rotation.interpolate({
+                  inputRange: [-360, 360],
+                  outputRange: ["-360deg", "360deg"],
+                }),
+              },
+              { scale: Animated.multiply(baseScale, scale) },
+              {
+                translateX: Animated.multiply(
+                  Animated.subtract(1, scale),
+                  pinchCenter.x
+                ),
+              },
+              {
+                translateY: Animated.multiply(
+                  Animated.subtract(1, scale),
+                  pinchCenter.y
+                ),
+              },
+            ],
+          },
+        ]}
+      >
+        {children}
+        <View {...rotateResponder.panHandlers} style={styles.rotateHandle}>
+          <RotateCw size={24} color="#333" />
+        </View>
+      </Animated.View>
+    </PinchGestureHandler>
   );
 };
 
@@ -159,6 +228,28 @@ const FontSizeSelector = ({ currentSize, onSizeChange }) => {
   );
 };
 
+// フォント選択コンポーネント
+const FontSelector = ({ currentFont, onFontChange }) => {
+  const fonts = ["System", "Hiragino", "Arial", "Courier"]; // 使用可能なフォント
+
+  return (
+    <View style={styles.fontSelector}>
+      {fonts.map((font) => (
+        <TouchableOpacity
+          key={font}
+          style={styles.fontOption}
+          onPress={() => onFontChange(font)}
+          accessibilityLabel={`フォントを選択: ${font}`}
+        >
+          <Text style={[styles.fontOptionText, { fontFamily: font }]}>
+            {font}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+
 // カラーピッカーコンポーネント
 const ColorPicker = ({ onColorChange }) => {
   const colors = [
@@ -192,24 +283,13 @@ const TextFormatToolbar = ({ onFormatChange, currentFormat, onDelete }) => (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={styles.toolbar}
+      contentContainerStyle={styles.toolbar}
     >
       <View style={styles.toolbarGroup}>
-        <TouchableOpacity
-          style={styles.toolbarButton}
-          onPress={() =>
-            onFormatChange(
-              "fontFamily",
-              currentFormat.fontFamily === "System" ? "hiragana" : "System"
-            )
-          }
-          accessibilityLabel="フォントファミリーを変更"
-        >
-          <Type
-            size={24}
-            color={currentFormat.fontFamily === "Hiragino" ? "#C1A14E" : "#333"}
-          />
-        </TouchableOpacity>
+        <FontSelector
+          currentFont={currentFormat.fontFamily}
+          onFontChange={(font) => onFormatChange("fontFamily", font)}
+        />
         <FontSizeSelector
           currentSize={currentFormat.fontSize}
           onSizeChange={(size) => onFormatChange("fontSize", size)}
@@ -332,7 +412,7 @@ const TextInputModal = ({
 }) => {
   const [text, setText] = useState(initialText); // テキストの状態
   const [format, setFormat] = useState(initialFormat); // フォーマットの状態
-  const [previewText, setPreviewText] = useState(""); // プレビュー用のテキスト
+  const [previewText, setPreviewText] = useState(initialText); // プレビュー用のテキスト
   const [otherUsers, setOtherUsers] = useState([]); // 他のユーザーの状態
   const [socket, setSocket] = useState(null); // WebSocketの状態
 
@@ -391,6 +471,12 @@ const TextInputModal = ({
   const handleFormatChange = (key, value) => {
     setFormat((prev) => ({ ...prev, [key]: value }));
   };
+
+  useEffect(() => {
+    // initialTextが変更されたときにtextとpreviewTextを更新
+    setText(initialText);
+    setPreviewText(initialText);
+  }, [initialText]);
 
   useEffect(() => {
     // リアルタイムプレビューの更新
@@ -476,6 +562,17 @@ export default function LogCreation({ marker, onClose }) {
   const navigation = useNavigation(); // ナビゲーションフック
   const [showMemberModal, setShowMemberModal] = useState(false); // メンバー選択モーダルの表示状態
   const [membersWithPermissions, setMembersWithPermissions] = useState([]); // メンバーの状態管理
+  const [selectedMembers, setSelectedMembers] = useState([]); // 選択されたメンバー
+
+  // メンバー選択画面への遷移
+  const handleMemberSelect = () => {
+    navigation.navigate("MemberSelect", {
+      onMembersSelected: (members) => {
+        setSelectedMembers(members); // 選択されたメンバーを状態に保存
+        setShowMemberModal(false); // モーダルを閉じる
+      },
+    });
+  };
 
   // メンバー追加ボタンの処理
   const handleAddMembers = () => {
@@ -485,21 +582,7 @@ export default function LogCreation({ marker, onClose }) {
   // メンバー選択後の処理
   const handleSaveMembers = (selectedMembers) => {
     setMembersWithPermissions(selectedMembers); // 選択されたメンバーを保存
-    setShowMemberModal(false); // モーダルを閉じる
-  };
-
-  const saveLogData = async () => {
-    try {
-      const logData = {
-        elements,
-        membersWithPermissions,
-      };
-      // AsyncStorageを使用してデータを保存
-      await AsyncStorage.setItem('logData', JSON.stringify(logData));
-      Alert.alert("保存完了", "情報が正常に保存されました。");
-    } catch (error) {
-      Alert.alert("保存エラー", "情報の保存中にエラーが発生しました。");
-    }
+    navigation.goBack(); // モーダルを閉じる
   };
 
   // デフォルトのテキストフォーマット
@@ -512,30 +595,67 @@ export default function LogCreation({ marker, onClose }) {
     color: "#333",
     textAlign: "left",
   };
-
+  // ログデータの読み込み
   useEffect(() => {
-    if (marker) {
-      // マーカーの情報を要素として追加
-      setElements([
-        {
-          id: "1",
-          type: "text",
-          content: marker.title,
-          x: 50,
-          y: 50,
-          format: { ...defaultTextFormat },
-        },
-        {
-          id: "2",
-          type: "text",
-          content: marker.description,
-          x: 50,
-          y: 100,
-          format: { ...defaultTextFormat },
-        },
-      ]);
-    }
+    const loadLogData = async () => {
+      if (!marker || !marker.id) return;
+      const storageKey = `logData_${marker.id}`;
+      try {
+        const savedData = await AsyncStorage.getItem(storageKey);
+        console.log("ロードされたデータ:", savedData); // デバッグ用ログ
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          setElements(parsedData.elements);
+          setMembersWithPermissions(parsedData.membersWithPermissions);
+        } else {
+          // 保存されたデータがない場合、デフォルトの初期値を設定
+          setElements([
+            {
+              id: "1",
+              type: "text",
+              content: marker.title || "デフォルトタイトル",
+              x: 50,
+              y: 50,
+              format: { ...defaultTextFormat },
+            },
+            {
+              id: "2",
+              type: "text",
+              content: marker.description || "デフォルト説明",
+              x: 50,
+              y: 100,
+              format: { ...defaultTextFormat },
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("ログデータの読み込みエラー", error);
+      }
+    };
+    loadLogData();
   }, [marker]);
+
+  // ログデータの保存
+  const saveLogData = async () => {
+    try {
+      if (!marker || !marker.id) {
+        Alert.alert("保存エラー", "マーカーが選択されていません。");
+        return;
+      }
+      const logData = {
+        elements,
+        membersWithPermissions,
+      };
+      // マーカーIDをキーとして使用してデータを保存
+      const storageKey = `logData_${marker.id}`;
+      console.log("保存するデータ:", logData); // デバッグ用ログ
+      await AsyncStorage.setItem(storageKey, JSON.stringify(logData));
+      Alert.alert("保存完了", "情報が正常に保存されました。");
+    } catch (error) {
+      console.error("保存エラー:", error); // エラーをコンソールに出力
+      Alert.alert("保存エラー", "情報の保存中にエラーが発生しました。");
+    }
+  };
 
   // 画像アップロード
   const pickImage = async () => {
@@ -567,8 +687,7 @@ export default function LogCreation({ marker, onClose }) {
         pickImage(); // 画像を選択
         break;
       case "user":
-        setShowMemberModal(true); // メンバー選択モーダルを表示
-        console.log("ユーザー追加");
+        handleMemberSelect(); // メンバー選択画面への遷移
         break;
       case "layout":
         console.log("レイアウト追加");
@@ -636,6 +755,7 @@ export default function LogCreation({ marker, onClose }) {
       addElement("text", text, newTextPosition.x, newTextPosition.y, format);
     }
     setShowTextInputModal(false); // モーダルを閉じる
+    saveLogData();
   };
 
   // 要素を削除
@@ -655,9 +775,26 @@ export default function LogCreation({ marker, onClose }) {
             id={element.id}
             initialX={element.x}
             initialY={element.y}
+            initialRotation={0}
+            initialScale={1}
             onDragEnd={({ id, x, y }) => updateElementPosition(id, x, y)}
             onPress={handleElementPress}
             onLongPress={handleElementLongPress}
+            onRotateEnd={({ id, rotation }) => {
+              const angle = rotation * (180 / Math.PI);
+              setElements((prevElements) =>
+                prevElements.map((el) =>
+                  el.id === id ? { ...el, rotation: angle } : el
+                )
+              );
+            }}
+            onScaleEnd={({ id, scale }) => {
+              setElements((prevElements) =>
+                prevElements.map((el) =>
+                  el.id === id ? { ...el, scale } : el
+                )
+              );
+            }}
           >
             <Text style={[styles.draggableText, element.format]}>
               {element.content}
@@ -671,9 +808,26 @@ export default function LogCreation({ marker, onClose }) {
             id={element.id}
             initialX={element.x}
             initialY={element.y}
+            initialRotation={0}
+            initialScale={1}
             onDragEnd={({ id, x, y }) => updateElementPosition(id, x, y)}
             onPress={handleElementPress}
             onLongPress={handleElementLongPress}
+            onRotateEnd={({ id, rotation }) => {
+              const angle = rotation * (180 / Math.PI);
+              setElements((prevElements) =>
+                prevElements.map((el) =>
+                  el.id === id ? { ...el, rotation: angle } : el
+                )
+              );
+            }}
+            onScaleEnd={({ id, scale }) => {
+              setElements((prevElements) =>
+                prevElements.map((el) =>
+                  el.id === id ? { ...el, scale } : el
+                )
+              );
+            }}
           >
             <Image
               source={{ uri: element.content }}
@@ -767,11 +921,14 @@ export default function LogCreation({ marker, onClose }) {
       {/* メンバー選択モーダル */}
       <Modal visible={showMemberModal} animationType="slide">
         <MemberSelect
-          navigation={navigation} // 必要に応じてナビゲーションを渡す
+          navigation={navigation} // ナビゲーションを渡す
           route={{
             params: {
-              onMembersSelected: handleSaveMembers, // メンバー選択後のコールバック
-              redirectTo: "LogCreation", // 遷移先の指定
+              onMembersSelected: (members) => {
+                setSelectedMembers(members); // 選択したメンバーを状態に保存
+                setShowMemberModal(false); // モーダルを閉じる
+              },
+              redirectTo: "LogCreation", // 確定後にLogCreationに戻る
             },
           }}
         />

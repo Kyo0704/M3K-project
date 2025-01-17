@@ -10,14 +10,16 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { Navigation, MapPin, Trash2, Plus } from "lucide-react-native";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import mapStyle from "./raw/map_style.json";
 import LogCreation from "./LogCreation";
 import styles from "./CSS/RouteMapStyle";
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function RouteMap() {
   const route = useRoute(); // ルート情報を取得
   const mapRef = useRef(null); // MapViewの参照を保持
+  const navigation = useNavigation(); // ナビゲーションフックを使用
 
   const { gpsData, initialRegion: passedRegion } = route.params; // ルートから渡されたパラメータを取得
 
@@ -33,16 +35,19 @@ export default function RouteMap() {
   const [showLogCreation, setShowLogCreation] = useState(false); // ログ作成モーダルの表示フラグ
   const [showConfirmationModal, setShowConfirmationModal] = useState(false); // 確認モーダルの表示フラグ
   const [markerToNavigate, setMarkerToNavigate] = useState(null); // ナビゲートするマーカー
+  const [newMarkerDescription, setNewMarkerDescription] = useState(""); // 新しいマーカーの説明
 
   // 永続化されたマーカーをロード
   useEffect(() => {
     const loadMarkers = async () => {
       try {
+        // マーカーをリセット
+        setMarkers([]);
+
         const storedMarkers = await AsyncStorage.getItem("markers");
         let loadedMarkers = storedMarkers ? JSON.parse(storedMarkers) : [];
 
         if (gpsData) {
-          // GPSデータからルート座標とマーカーを生成
           const routeCoords = gpsData.map((point) => ({
             latitude: point.coordinates.latitude,
             longitude: point.coordinates.longitude,
@@ -62,15 +67,22 @@ export default function RouteMap() {
           setRouteCoordinates(routeCoords);
 
           if (routeCoords.length > 0) {
-            // 初期表示の地図領域を設定
             setInitialRegion({
               latitude: routeCoords[0].latitude,
               longitude: routeCoords[0].longitude,
               latitudeDelta: 0.02,
               longitudeDelta: 0.02,
             });
+          } else {
+            // デフォルトの初期表示領域を設定
+            setInitialRegion({
+              latitude: 35.0116, // 京都の緯度
+              longitude: 135.7681, // 京都の経度
+              latitudeDelta: 0.02,
+              longitudeDelta: 0.02,
+            });
           }
-          // 重複を排除してマーカーを設定
+
           const allMarkers = [...loadedMarkers, ...markersData];
           const uniqueMarkers = Array.from(
             new Map(allMarkers.map((marker) => [marker.id, marker])).values()
@@ -84,6 +96,10 @@ export default function RouteMap() {
     };
 
     loadMarkers();
+
+    return () => {
+      setMarkers([]);
+    };
   }, [gpsData, passedRegion]);
 
   // マーカーを永続化
@@ -97,19 +113,21 @@ export default function RouteMap() {
 
   // ピンを追加
   const handleAddNewMarker = () => {
-    if (newMarkerCoordinate && newMarkerTitle) {
+    if (newMarkerCoordinate && newMarkerTitle && newMarkerDescription) {
       const newMarker = {
         id: Date.now().toString(),
         coordinate: newMarkerCoordinate,
         title: newMarkerTitle,
-        description: new Date().toLocaleDateString(),
+        description: newMarkerDescription,
       };
       const updatedMarkers = [...markers, newMarker];
       setMarkers(updatedMarkers);
       saveMarkers(updatedMarkers); // 永続化
       setShowNewMarkerInput(false);
       setNewMarkerTitle("");
+      setNewMarkerDescription(""); // 説明をリセット
       setNewMarkerCoordinate(null);
+      setIsAddingPin(false); // ピン追加モードをオフにする
     }
   };
 
@@ -132,9 +150,9 @@ export default function RouteMap() {
   const handleMapPress = (event) => {
     if (isAddingPin) {
       setNewMarkerCoordinate(event.nativeEvent.coordinate);
-      setShowNewMarkerInput(true);
-      setIsAddingPin(false);
+      setShowNewMarkerInput(true); // 入力フィールドを表示
     }
+    setSelectedMarker(null);
   };
 
   // ピンを削除
@@ -175,10 +193,52 @@ export default function RouteMap() {
   // ピン追加モードを切り替え
   const toggleAddPin = () => {
     setIsAddingPin(!isAddingPin);
+    setShowNewMarkerInput(false); // モード切替時に入力フィールドを非表示
+  };
+
+  // 例えば、マーカーを選択した後にNewCreateに戻る場合
+  const handleBackToNewCreate = () => {
+    navigation.navigate("NewCreate"); // NewCreate画面に戻る
+  };
+
+  // 保存機能を追加
+  const saveAllData = async () => {
+    try {
+      // 各画面のデータを取得
+      const logCreationData = await AsyncStorage.getItem("logCreationData");
+      const newCreateData = await AsyncStorage.getItem("newCreateData");
+      const gpsConfirmationData = await AsyncStorage.getItem("gpsConfirmationData");
+
+      // データを保存
+      await AsyncStorage.setItem("allData", JSON.stringify({
+        logCreation: logCreationData ? JSON.parse(logCreationData) : {},
+        newCreate: newCreateData ? JSON.parse(newCreateData) : {},
+        gpsConfirmation: gpsConfirmationData ? JSON.parse(gpsConfirmationData) : {},
+      }));
+
+      Alert.alert("保存完了", "すべてのデータが正常に保存されました。");
+
+      // 保存完了後にLogeCreate画面に遷移
+      navigation.navigate("LogeCreate");
+
+    } catch (error) {
+      console.error("データの保存エラー:", error);
+      Alert.alert("保存エラー", "データの保存中にエラーが発生しました。");
+    }
   };
 
   return (
     <View style={styles.container}>
+      <View style={styles.banner}>
+        <Text style={styles.bannerText}>マップ</Text>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={saveAllData} // 保存機能を呼び出す
+        >
+          <Icon name="save" size={20} color="#fff" />
+          <Text style={styles.saveButtonText}>保存</Text>
+        </TouchableOpacity>
+      </View>
       <MapView
         ref={mapRef}
         customMapStyle={mapStyle}
@@ -214,7 +274,7 @@ export default function RouteMap() {
       {selectedMarker && !showConfirmationModal && (
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={handleDeleteMarker} // 削除ボタン
+          onPress={handleDeleteMarker}
         >
           <Trash2 size={24} color="#fff" />
         </TouchableOpacity>
@@ -232,9 +292,16 @@ export default function RouteMap() {
             onChangeText={setNewMarkerTitle}
             placeholder="マーカーの名前を入力"
           />
+          <TextInput
+            style={styles.input}
+            value={newMarkerDescription}
+            onChangeText={setNewMarkerDescription}
+            placeholder="マーカーの説明を入力"
+          />
           <TouchableOpacity
             style={styles.addButton}
             onPress={handleAddNewMarker}
+            activeOpacity={0.7}
           >
             <Plus size={24} color="#fff" />
           </TouchableOpacity>

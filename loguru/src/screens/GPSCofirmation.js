@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
-} from 'react-native';
-import { MapPin } from 'lucide-react-native';
-import * as Location from 'expo-location';
-import { useNavigation, useRoute } from '@react-navigation/native';
+} from "react-native";
+import { MapPin } from "lucide-react-native";
+import * as Location from "expo-location";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 export default function GPSConfirmation() {
   const navigation = useNavigation(); // React Navigationのナビゲーションフックを使用して、画面遷移を管理
@@ -19,8 +19,8 @@ export default function GPSConfirmation() {
 
   useEffect(() => {
     // コンポーネントがマウントされたときに実行される
-    console.log('GPSConfirmation mounted');
-    console.log('Route params:', route.params); // ルートパラメータをコンソールに出力
+    console.log("GPSConfirmation mounted");
+    console.log("Route params:", route.params); // ルートパラメータをコンソールに出力
   }, []);
 
   // ダミーデータ用の座標（京都の範囲）
@@ -33,18 +33,18 @@ export default function GPSConfirmation() {
 
   const handleYes = async () => {
     // 「はい」ボタンが押されたときの処理
-    console.log('handleYes called');
+    console.log("handleYes called");
     setIsLoading(true); // ローディング状態を開始
 
     try {
       let gpsData; // GPSデータを格納する変数
 
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV === "production") {
         // 本番環境の場合
         const { status } = await Location.requestForegroundPermissionsAsync(); // GPS使用の権限をリクエスト
-        if (status !== 'granted') {
+        if (status !== "granted") {
           // 権限がない場合
-          Alert.alert('権限エラー', 'GPSの使用が許可されていません。');
+          Alert.alert("権限エラー", "GPSの使用が許可されていません。");
           return;
         }
 
@@ -64,7 +64,9 @@ export default function GPSConfirmation() {
         const days = route.params?.days || 1; // ルートパラメータから日数を取得、デフォルトは1
         gpsData = Array.from({ length: days }, (_, index) => ({
           day: index + 1, // 日数を設定
-          timestamp: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString(), // 日付を過去に遡って設定
+          timestamp: new Date(
+            Date.now() - index * 24 * 60 * 60 * 1000
+          ).toISOString(), // 日付を過去に遡って設定
           coordinates: {
             latitude:
               KYOTO_COORDINATES.latitudeBase +
@@ -74,7 +76,7 @@ export default function GPSConfirmation() {
               (Math.random() - 0.5) * KYOTO_COORDINATES.longitudeOffset, // ランダムな経度を生成
           },
         }));
-        
+
         // 重複を排除
         gpsData = Array.from(
           new Set(
@@ -98,11 +100,11 @@ export default function GPSConfirmation() {
               longitude: parseFloat(longitude),
             },
           };
-        });      
+        });
       }
 
       // GPSデータ確認
-      console.log('GPS Data:', gpsData);
+      console.log("GPS Data:", gpsData);
 
       // 初期地点の設定
       const initialRegion = {
@@ -113,10 +115,10 @@ export default function GPSConfirmation() {
       };
 
       setModalVisible(false); // モーダルを非表示にする
-      navigation.navigate('RouteMap', { gpsData, initialRegion }); // ルートマップ画面にナビゲート
+      navigation.navigate("RouteMap", { gpsData, initialRegion }); // ルートマップ画面にナビゲート
     } catch (error) {
-      console.error('Error in handleYes:', error); // エラーをコンソールに出力
-      Alert.alert('エラー', 'GPSデータの取得に失敗しました。'); // エラーメッセージを表示
+      console.error("Error in handleYes:", error); // エラーをコンソールに出力
+      Alert.alert("エラー", "GPSデータの取得に失敗しました。"); // エラーメッセージを表示
     } finally {
       setIsLoading(false); // ローディング状態を終了
     }
@@ -124,7 +126,7 @@ export default function GPSConfirmation() {
 
   const handleNo = () => {
     // 「いいえ」ボタンが押されたときの処理
-    console.log('handleNo called');
+    console.log("handleNo called");
     setModalVisible(false); // モーダルを非表示にする
     navigation.goBack(); // 前の画面に戻る
   };
@@ -139,26 +141,26 @@ export default function GPSConfirmation() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <MapPin size={24} color="#333" style={styles.icon} /> {/* アイコンを表示 */}
-            <Text style={styles.title}>確認</Text> {/* タイトルを表示 */}
+            <MapPin size={24} color="#333" style={styles.icon} />
+            <Text style={styles.title}>確認</Text>
             <Text style={styles.message}>
               現在、取得しているGPSデータから旅行ログを作成しますか？
-            </Text> {/* メッセージを表示 */}
+            </Text>
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={[styles.button, styles.buttonNo]} // ボタンのスタイルを設定
-                onPress={handleNo} // 「いいえ」ボタンが押されたときの処理
-                disabled={isLoading} // ローディング中はボタンを無効化
+                style={[styles.button, styles.buttonNo]}
+                onPress={handleNo}
+                disabled={isLoading}
               >
-                <Text style={styles.buttonTextNo}>いいえ</Text> {/* ボタンのテキスト */}
+                <Text style={styles.buttonTextNo}>いいえ</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, styles.buttonYes]} // ボタンのスタイルを設定
-                onPress={handleYes} // 「はい」ボタンが押されたときの処理
-                disabled={isLoading} // ローディング中はボタンを無効化
+                style={[styles.button, styles.buttonYes]}
+                onPress={handleYes}
+                disabled={isLoading}
               >
                 <Text style={styles.buttonTextYes}>
-                  {isLoading ? '読み込み中...' : 'はい'} {/* ローディング中のテキストを切り替え */}
+                  {isLoading ? "読み込み中..." : "はい"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -172,22 +174,22 @@ export default function GPSConfirmation() {
 const styles = StyleSheet.create({
   container: {
     flex: 1, // コンテナを画面全体に広げる
-    backgroundColor: 'transparent', // 背景を透明に設定
+    backgroundColor: "transparent", // 背景を透明に設定
   },
   modalOverlay: {
     flex: 1, // オーバーレイを画面全体に広げる
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // 半透明の黒背景
-    justifyContent: 'center', // 垂直方向に中央揃え
-    alignItems: 'center', // 水平方向に中央揃え
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // 半透明の黒背景
+    justifyContent: "center", // 垂直方向に中央揃え
+    alignItems: "center", // 水平方向に中央揃え
   },
   modalContent: {
-    backgroundColor: 'white', // モーダルの背景色
+    backgroundColor: "white", // モーダルの背景色
     borderRadius: 12, // 角を丸くする
     padding: 24, // 内側の余白
-    width: '80%', // 幅を画面の80%に設定
-    alignItems: 'center', // 水平方向に中央揃え
+    width: "80%", // 幅を画面の80%に設定
+    alignItems: "center", // 水平方向に中央揃え
     elevation: 5, // Android用の影
-    shadowColor: '#000', // iOS用の影の色
+    shadowColor: "#000", // iOS用の影の色
     shadowOffset: {
       width: 0,
       height: 2,
@@ -200,20 +202,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20, // フォントサイズ
-    fontWeight: 'bold', // フォントの太さ
+    fontWeight: "bold", // フォントの太さ
     marginBottom: 16, // 下部の余白
-    color: '#333', // テキストの色
+    color: "#333", // テキストの色
   },
   message: {
     fontSize: 16, // フォントサイズ
-    textAlign: 'center', // テキストを中央揃え
+    textAlign: "center", // テキストを中央揃え
     marginBottom: 24, // 下部の余白
-    color: '#666', // テキストの色
+    color: "#666", // テキストの色
     lineHeight: 24, // 行の高さ
   },
   buttonContainer: {
-    flexDirection: 'row', // ボタンを横並びに配置
-    justifyContent: 'center', // 中央揃え
+    flexDirection: "row", // ボタンを横並びに配置
+    justifyContent: "center", // 中央揃え
     gap: 16, // ボタン間の隙間
   },
   button: {
@@ -221,21 +223,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, // 左右の余白
     borderRadius: 4, // 角を丸くする
     minWidth: 100, // 最小幅
-    alignItems: 'center', // 水平方向に中央揃え
+    alignItems: "center", // 水平方向に中央揃え
   },
   buttonYes: {
-    backgroundColor: '#C1A14E', // 「はい」ボタンの背景色
+    backgroundColor: "#C1A14E", // 「はい」ボタンの背景色
   },
   buttonNo: {
-    backgroundColor: 'transparent', // 「いいえ」ボタンの背景色
+    backgroundColor: "transparent", // 「いいえ」ボタンの背景色
   },
   buttonTextYes: {
-    color: 'white', // 「はい」ボタンのテキスト色
+    color: "white", // 「はい」ボタンのテキスト色
     fontSize: 16, // フォントサイズ
-    fontWeight: 'bold', // フォントの太さ
+    fontWeight: "bold", // フォントの太さ
   },
   buttonTextNo: {
-    color: '#C1A14E', // 「いいえ」ボタンのテキスト色
+    color: "#C1A14E", // 「いいえ」ボタンのテキスト色
     fontSize: 16, // フォントサイズ
   },
 });

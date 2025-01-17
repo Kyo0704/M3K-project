@@ -9,6 +9,15 @@ const styles = StyleSheet.create({
     padding: 8,
     marginBottom: 12,
   },
+  rotateHandle: {
+    position: 'absolute',
+    top: -20,
+    left: '50%',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    transform: [{ translateX: -10 }],
+  },
   toolbarGroup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -375,6 +384,53 @@ const styles = StyleSheet.create({
     memberChipText: {
       color: '#333',
       fontSize: 14,
+    },
+    textInputContainer: {
+      borderWidth: 1,
+      borderColor: '#00FFFF',
+      padding: 8,
+      margin: 10,
+    },
+    toolbar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#fff',
+      padding: 5,
+      borderRadius: 5,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    toolbarButton: {
+      marginHorizontal: 5,
+    },
+    fontSizeSelector: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#333',
+      borderRadius: 5,
+      padding: 5,
+    },
+    fontSizeButtonText: {
+      marginHorizontal: 5,
+    },
+    fontSelector: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 8,
+    },
+    fontOption: {
+      padding: 8,
+      borderRadius: 4,
+      marginHorizontal: 4,
+      backgroundColor: '#f0f0f0',
+    },
+    fontOptionText: {
+      fontSize: 16,
+      color: '#333',
     },
   });
   

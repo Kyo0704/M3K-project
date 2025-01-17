@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // アバターコンポーネント
 const Avatar = ({ uri, size = 40 }) => (
@@ -37,7 +38,7 @@ export default function LogeCreate() {
         title: '北海道旅行',
         date: '2023-12-20',
         members: ['田中', '佐藤', '園下'],
-        image: 'https://example.com/hokkaido.jpg',
+        image: 'https://find47.jp/ja/i/HiRGD',
         avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=田中',
       },
       {
@@ -45,7 +46,7 @@ export default function LogeCreate() {
         title: '沖縄旅行',
         date: '2023-11-15',
         members: ['山田', '鈴木'],
-        image: 'https://example.com/okinawa.jpg',
+        image: 'https://find47.jp/ja/i/cQQMQ',
         avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=山田',
       },
       // 他のログデータ...

@@ -1,0 +1,90 @@
+{
+  "exitingTags": [
+    {
+      "id": "1",
+      "tagName": "文化"
+    },
+    {
+      "id": "2",
+      "tagName": "京都"
+    },
+    {
+      "id": "3",
+      "tagName": "食べ物"
+    }
+  ],
+  "selectedTags": [
+    {
+      "id": "1",
+      "tagName": "文化"
+    },
+    {
+      "id": "2",
+      "tagName": "京都"
+    }
+  ],
+  "photos": [
+    {
+      "photo_id": 1,
+      "s3": "https://placehold.jp/150x150.png",
+      "tags": "文化",
+      "id": "4dea"
+    },
+    {
+      "photo_id": 2,
+      "s3": "https://placehold.jp/150x150.png",
+      "tags": "文化",
+      "id": "3d8d"
+    },
+    {
+      "photo_id": 3,
+      "s3": "https://placehold.jp/150x150.png",
+      "tags": "京都",
+      "id": "7eed"
+    },
+    {
+      "photo_id": 4,
+      "s3": "https://placehold.jp/150x150.png",
+      "tags": "大阪",
+      "id": "6b44"
+    },
+    {
+      "photo_id": 5,
+      "s3": "https://placehold.jp/150x150.png",
+      "tags": "大阪",
+      "id": "15d0"
+    },
+    {
+      "photo_id": 6,
+      "s3": "https://placehold.jp/150x150.png",
+      "tags": "大阪",
+      "id": "12ba"
+    },
+    {
+      "photo_id": 7,
+      "s3": "https://placehold.jp/150x150.png",
+      "tags": "大阪",
+      "id": "ef3f"
+    }
+  ],
+  "userData": [
+    {
+      "user_id": 1,
+      "name": "Taro Tanaka",
+      "mailAddress":"sample@sample.com",
+      "profile_image": "https://placehold.jp/150x150.png"
+    }
+  ],
+  "homeLog":[
+    {
+      "log_id":1,
+      "title":"京都旅行",
+      "thumbnail":"https://placehold.jp/150x150.png"
+    },
+    {
+      "log_id":2,
+      "title":"北海道旅行",
+      "thumbnail":"https://placehold.jp/150x150.png"
+    }
+  ]
+}

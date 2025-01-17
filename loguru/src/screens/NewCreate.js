@@ -15,22 +15,26 @@ import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import styles from "./CSS/NewCreateStyle";
 import MemberSelect from "./MemberSelect";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 
 export default function NewCreate() {
-  const [selectedMembers, setSelectedMembers] = useState([]);
-  const [title, setTitle] = useState("");
-  const [days, setDays] = useState("");
-  const [year, setYear] = useState("");
-  const [month, setMonth] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
-  const [thumbnailUri, setThumbnailUri] = useState(null);
-  const navigation = useNavigation();
-  const [showMemberModal, setShowMemberModal] = useState(false); // モーダル表示制御
+  // 各種状態を管理するためのuseStateフック
+  const [selectedMembers, setSelectedMembers] = useState([]); // 選択されたメンバー
+  const [title, setTitle] = useState(""); // タイトル
+  const [days, setDays] = useState(""); // 日数
+  const [year, setYear] = useState(""); // 年
+  const [month, setMonth] = useState(""); // 月
+  const [startDate, setStartDate] = useState(""); // 開始日
+  const [endDate, setEndDate] = useState(""); // 終了日
+  const [isPublic, setIsPublic] = useState(false); // 公開設定
+  const [thumbnailUri, setThumbnailUri] = useState(null); // サムネイル画像のURI
+  const navigation = useNavigation(); // ナビゲーションフック
+  const [showMemberModal, setShowMemberModal] = useState(false); // メンバー選択モーダルの表示制御
 
-  //写真選択
+  // 写真選択機能
   const pickImage = async () => {
+    // メディアライブラリへのアクセス許可を要求
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -39,17 +43,20 @@ export default function NewCreate() {
       return;
     }
 
+    // 画像選択を開始
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // 画像のみ選択可能
+      allowsEditing: true, // 編集を許可
+      aspect: [1, 1], // アスペクト比を1:1に設定
+      quality: 1, // 画像品質を最大に設定
     });
 
     if (!result.canceled) {
-      setThumbnailUri(result.assets[0].uri);
+      setThumbnailUri(result.assets[0].uri); // 選択された画像のURIを状態に保存
     }
   };
+
+  // カレンダー画面への遷移
   const handleCalendarPress = () => {
     navigation.navigate("Calendar", {
       setDays,
@@ -60,27 +67,50 @@ export default function NewCreate() {
     });
   };
 
-  //メンバー選択
+  // メンバー選択画面への遷移
   const handleMemberSelect = () => {
     navigation.navigate("MemberSelect", {
       onMembersSelected: (members) => {
-        setSelectedMembers(members);
+        setSelectedMembers(members); // 選択されたメンバーを状態に保存
       },
     });
   };
 
-  // NewCreate.jsの「次へ」ボタンのonPressハンドラー
+  // 「次へ」ボタンの押下時の処理
   const handleNext = () => {
     if (!title || !days || selectedMembers.length === 0) {
       alert("すべての必須項目を入力してください。");
       return;
     }
-    navigation.navigate("GPSConfirmation", { days: parseInt(days, 10) });
+    navigation.navigate("GPSConfirmation", { days: parseInt(days, 10) }); // GPS確認画面へ遷移
+  };
+
+  // データの保存
+  const saveNewCreateData = async () => {
+    try {
+      const newCreateData = {
+        title,
+        days,
+        year,
+        month,
+        startDate,
+        endDate,
+        isPublic,
+        thumbnailUri,
+        selectedMembers,
+      };
+      await AsyncStorage.setItem("newCreateData", JSON.stringify(newCreateData));
+      Alert.alert("保存完了", "NewCreateデータが正常に保存されました。");
+    } catch (error) {
+      console.error("保存エラー:", error);
+      Alert.alert("保存エラー", "NewCreateデータの保存中にエラーが発生しました。");
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* タイトル入力 */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>タイトル</Text>
           <TextInput
@@ -91,6 +121,7 @@ export default function NewCreate() {
           />
         </View>
 
+        {/* サムネイル選択 */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>サムネイル</Text>
           <TouchableOpacity
@@ -111,6 +142,7 @@ export default function NewCreate() {
           </TouchableOpacity>
         </View>
 
+        {/* 日数選択 */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>日数</Text>
           <TouchableOpacity style={styles.input} onPress={handleCalendarPress}>
@@ -128,13 +160,13 @@ export default function NewCreate() {
           </TouchableOpacity>
         </View>
 
+        {/* メンバー選択 */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>メンバー</Text>
           <TouchableOpacity style={styles.input} onPress={handleMemberSelect}>
             {selectedMembers.length > 0 ? (
               <Text style={styles.inputText}>
-                {selectedMembers.map((member) => member.name).join(", ")}{" "}
-                {/* 選択されたメンバーを表示 */}
+                {selectedMembers.map((member) => member.name).join(", ")}
               </Text>
             ) : (
               <Text style={styles.placeholderText}>
@@ -160,6 +192,7 @@ export default function NewCreate() {
           </Modal>
         </View>
 
+        {/* 公開設定 */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>公開</Text>
           <Text style={styles.placeholderText}>
@@ -174,6 +207,7 @@ export default function NewCreate() {
           />
         </View>
 
+        {/* 次へボタン */}
         <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
           <Text style={styles.nextButtonText}>次へ</Text>
         </TouchableOpacity>
