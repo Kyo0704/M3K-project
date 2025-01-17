@@ -86,15 +86,15 @@ export default function GPSConfirmation() {
             )
           )
         ).map((uniqueKey) => {
-          const [latitude, longitude, timestamp] = uniqueKey.split(",");
+          const [latitude, longitude, timestamp] = uniqueKey.split(",");// ユニークなキーを分割
           return {
             day: gpsData.find(
               (point) =>
-                point.coordinates.latitude === parseFloat(latitude) &&
-                point.coordinates.longitude === parseFloat(longitude) &&
-                point.timestamp === timestamp
+                point.coordinates.latitude === parseFloat(latitude) && // 緯度が一致
+                point.coordinates.longitude === parseFloat(longitude) && // 経度が一致
+                point.timestamp === timestamp // タイムスタンプが一致
             ).day,
-            timestamp,
+            timestamp, // タイムスタンプ
             coordinates: {
               latitude: parseFloat(latitude),
               longitude: parseFloat(longitude),

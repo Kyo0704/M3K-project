@@ -17,7 +17,7 @@ import styles from "./CSS/RouteMapStyle";
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function RouteMap() {
-  const route = useRoute(); // ルート情報を取得
+  const route = useRoute(); // 現在のルート情報を取得
   const mapRef = useRef(null); // MapViewの参照を保持
   const navigation = useNavigation(); // ナビゲーションフックを使用
 
@@ -48,10 +48,12 @@ export default function RouteMap() {
         let loadedMarkers = storedMarkers ? JSON.parse(storedMarkers) : [];
 
         if (gpsData) {
+          // GPSデータからルート座標を生成
           const routeCoords = gpsData.map((point) => ({
             latitude: point.coordinates.latitude,
             longitude: point.coordinates.longitude,
           }));
+          // GPSデータからマーカー情報を生成
           const markersData = gpsData.map((point, index) => ({
             id: `gps-${index}-${point.coordinates.latitude}-${
               point.coordinates.longitude
@@ -64,9 +66,10 @@ export default function RouteMap() {
             description: new Date(point.timestamp).toLocaleDateString(),
           }));
 
-          setRouteCoordinates(routeCoords);
+          setRouteCoordinates(routeCoords); // ルート座標を設定
 
           if (routeCoords.length > 0) {
+            // ルートの最初の座標を初期表示領域に設定
             setInitialRegion({
               latitude: routeCoords[0].latitude,
               longitude: routeCoords[0].longitude,
@@ -74,7 +77,7 @@ export default function RouteMap() {
               longitudeDelta: 0.02,
             });
           } else {
-            // デフォルトの初期表示領域を設定
+            // デフォルトの初期表示領域を設定（京都）
             setInitialRegion({
               latitude: 35.0116, // 京都の緯度
               longitude: 135.7681, // 京都の経度
@@ -83,12 +86,13 @@ export default function RouteMap() {
             });
           }
 
+          // 永続化されたマーカーと新しいマーカーを結合し、重複を排除
           const allMarkers = [...loadedMarkers, ...markersData];
           const uniqueMarkers = Array.from(
             new Map(allMarkers.map((marker) => [marker.id, marker])).values()
           );
 
-          setMarkers(uniqueMarkers);
+          setMarkers(uniqueMarkers); // ユニークなマーカーを設定
         }
       } catch (error) {
         console.error("マーカーのロードエラー:", error);
@@ -98,7 +102,7 @@ export default function RouteMap() {
     loadMarkers();
 
     return () => {
-      setMarkers([]);
+      setMarkers([]); // コンポーネントのアンマウント時にマーカーをリセット
     };
   }, [gpsData, passedRegion]);
 
@@ -115,28 +119,28 @@ export default function RouteMap() {
   const handleAddNewMarker = () => {
     if (newMarkerCoordinate && newMarkerTitle && newMarkerDescription) {
       const newMarker = {
-        id: Date.now().toString(),
+        id: Date.now().toString(), // 現在のタイムスタンプをIDとして使用
         coordinate: newMarkerCoordinate,
         title: newMarkerTitle,
         description: newMarkerDescription,
       };
       const updatedMarkers = [...markers, newMarker];
-      setMarkers(updatedMarkers);
+      setMarkers(updatedMarkers); // 新しいマーカーを追加
       saveMarkers(updatedMarkers); // 永続化
-      setShowNewMarkerInput(false);
-      setNewMarkerTitle("");
+      setShowNewMarkerInput(false); // 入力フィールドを非表示
+      setNewMarkerTitle(""); // タイトルをリセット
       setNewMarkerDescription(""); // 説明をリセット
-      setNewMarkerCoordinate(null);
+      setNewMarkerCoordinate(null); // 座標をリセット
       setIsAddingPin(false); // ピン追加モードをオフにする
     }
   };
 
   // 確認モーダルの応答を処理
   const handleConfirmationResponse = (proceed) => {
-    setShowConfirmationModal(false);
+    setShowConfirmationModal(false); // モーダルを非表示
     if (proceed && markerToNavigate) {
-      setSelectedMarker(markerToNavigate);
-      setShowLogCreation(true);
+      setSelectedMarker(markerToNavigate); // ナビゲートするマーカーを選択
+      setShowLogCreation(true); // ログ作成モーダルを表示
     }
   };
 
@@ -149,10 +153,10 @@ export default function RouteMap() {
   // 地図が押されたときの処理
   const handleMapPress = (event) => {
     if (isAddingPin) {
-      setNewMarkerCoordinate(event.nativeEvent.coordinate);
+      setNewMarkerCoordinate(event.nativeEvent.coordinate); // 新しいマーカーの座標を設定
       setShowNewMarkerInput(true); // 入力フィールドを表示
     }
-    setSelectedMarker(null);
+    setSelectedMarker(null); // 選択されたマーカーをクリア
   };
 
   // ピンを削除
@@ -169,9 +173,9 @@ export default function RouteMap() {
               const updatedMarkers = markers.filter(
                 (m) => m.id !== selectedMarker.id
               );
-              setMarkers(updatedMarkers);
-              saveMarkers(updatedMarkers);
-              setSelectedMarker(null);
+              setMarkers(updatedMarkers); // マーカーを削除
+              saveMarkers(updatedMarkers); // 永続化
+              setSelectedMarker(null); // 選択をクリア
             },
             style: "destructive",
           },
@@ -192,7 +196,7 @@ export default function RouteMap() {
 
   // ピン追加モードを切り替え
   const toggleAddPin = () => {
-    setIsAddingPin(!isAddingPin);
+    setIsAddingPin(!isAddingPin); // ピン追加モードをトグル
     setShowNewMarkerInput(false); // モード切替時に入力フィールドを非表示
   };
 

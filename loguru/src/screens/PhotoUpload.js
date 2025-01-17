@@ -25,7 +25,7 @@ export default function PhotoUpload() {
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    // 許可が得られなかった場合、アラートを表示
+    // 許可が得られなかった場合、アラートを表示して終了
     if (!permissionResult.granted) {
       Alert.alert("権限エラー", "カメラロールへのアクセス許可が必要です。");
       return;
@@ -50,12 +50,13 @@ export default function PhotoUpload() {
 
   // 画像を削除するための関数
   const removeImage = (index) => {
-    setSelectedImages((prev) => prev.filter((_, i) => i !== index)); // 指定されたインデックスの画像を削除
+    // 指定されたインデックスの画像を削除
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   // 画像をアップロードするための関数
   const handleUpload = () => {
-    // 画像が選択されていない場合、アラートを表示
+    // 画像が選択されていない場合、アラートを表示して終了
     if (selectedImages.length === 0) {
       Alert.alert("エラー", "画像を選択してください。");
       return;
@@ -65,19 +66,20 @@ export default function PhotoUpload() {
     Alert.alert("完了", "アップロードが完了しました。タグを追加しますか？", [
       {
         text: "あとで",
-        onPress: () => navigation.goBack(),
+        onPress: () => navigation.goBack(), // "あとで"を選択した場合、前の画面に戻る
         style: "cancel",
       },
       {
         text: "タグを追加",
         onPress: () => {
+          // "タグを追加"を選択した場合、PhotoTag画面に遷移し、画像URIと日付を渡す
           navigation.navigate("PhotoTag", {
-            imageUri: selectedImages[0].uri,
-            date: new Date().toISOString(),
+            imageUri: selectedImages[0].uri, // 最初の画像のURIを渡す
+            date: new Date().toISOString(), // 現在の日付をISO形式で渡す
             remainingPhotos: selectedImages.slice(1).map((img) => ({
               uri: img.uri,
               date: new Date().toISOString(),
-            })),
+            })), // 残りの画像も同様に渡す
           });
         },
       },
@@ -89,9 +91,9 @@ export default function PhotoUpload() {
       {/* ヘッダー部分 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <X size={24} color="#333" />
+          <X size={24} color="#333" /> {/* 戻るボタン */}
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>写真のアップロード</Text>
+        <Text style={styles.headerTitle}>写真のアップロード</Text> {/* 画面タイトル */}
         <TouchableOpacity
           style={[
             styles.uploadButton,
@@ -100,7 +102,7 @@ export default function PhotoUpload() {
           onPress={handleUpload}
           disabled={selectedImages.length === 0} // ボタンの無効化条件
         >
-          <Upload size={20} color="#fff" />
+          <Upload size={20} color="#fff" /> {/* アップロードボタン */}
         </TouchableOpacity>
       </View>
 
@@ -108,32 +110,32 @@ export default function PhotoUpload() {
       <ScrollView style={styles.content}>
         <View style={styles.imageGrid}>
           <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-            <Camera size={32} color="#666" />
+            <Camera size={32} color="#666" /> {/* 画像追加ボタン */}
             <Text style={styles.addButtonText}>写真を追加</Text>
           </TouchableOpacity>
 
           {selectedImages.map((image, index) => (
             <View key={index} style={styles.imageContainer}>
               <Image
-                source={{ uri: validateImageUri(image.uri) }}
+                source={{ uri: validateImageUri(image.uri) }} // 画像のURIを検証して表示
                 style={styles.image}
                 onError={(error) => {
                   console.error(
                     "Image loading error:",
                     error.nativeEvent.error
-                  );
+                  ); // 画像読み込みエラーのログ
                 }}
               />
               <TouchableOpacity
                 style={styles.removeButton}
-                onPress={() => removeImage(index)}
+                onPress={() => removeImage(index)} // 画像削除ボタン
               >
                 <X size={16} color="#fff" />
               </TouchableOpacity>
               {image.tags.length > 0 && (
                 <View style={styles.tagIndicator}>
-                  <TagIcon size={12} color="#fff" />
-                  <Text style={styles.tagCount}>{image.tags.length}</Text>
+                  <TagIcon size={12} color="#fff" /> {/* タグアイコン */}
+                  <Text style={styles.tagCount}>{image.tags.length}</Text> {/* タグ数表示 */}
                 </View>
               )}
             </View>
@@ -148,84 +150,84 @@ export default function PhotoUpload() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#fff", // 背景色
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    flexDirection: "row", // 横並び
+    alignItems: "center", // 垂直方向の中央揃え
+    justifyContent: "space-between", // 両端揃え
+    padding: 16, // パディング
+    borderBottomWidth: 1, // 下線
+    borderBottomColor: "#eee", // 下線の色
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 18, // フォントサイズ
+    fontWeight: "bold", // 太字
+    color: "#333", // 文字色
   },
   uploadButton: {
-    backgroundColor: "#C1A14E",
-    padding: 8,
-    borderRadius: 8,
+    backgroundColor: "#C1A14E", // ボタンの背景色
+    padding: 8, // パディング
+    borderRadius: 8, // 角丸
   },
   uploadButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#ccc", // 無効化時の背景色
   },
   content: {
-    flex: 1,
+    flex: 1, // コンテンツの高さを最大化
   },
   imageGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 8,
+    flexDirection: "row", // 横並び
+    flexWrap: "wrap", // 折り返し
+    padding: 8, // パディング
   },
   addButton: {
-    width: "31%",
-    aspectRatio: 1,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    margin: "1%",
-    justifyContent: "center",
-    alignItems: "center",
+    width: "31%", // 幅
+    aspectRatio: 1, // アスペクト比
+    backgroundColor: "#f5f5f5", // 背景色
+    borderRadius: 8, // 角丸
+    margin: "1%", // マージン
+    justifyContent: "center", // 水平方向の中央揃え
+    alignItems: "center", // 垂直方向の中央揃え
   },
   addButtonText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#666",
+    marginTop: 8, // 上マージン
+    fontSize: 12, // フォントサイズ
+    color: "#666", // 文字色
   },
   imageContainer: {
-    width: "31%",
-    aspectRatio: 1,
-    margin: "1%",
-    borderRadius: 8,
-    overflow: "hidden",
+    width: "31%", // 幅
+    aspectRatio: 1, // アスペクト比
+    margin: "1%", // マージン
+    borderRadius: 8, // 角丸
+    overflow: "hidden", // はみ出しを隠す
   },
   image: {
-    width: "100%",
-    height: "100%",
+    width: "100%", // 幅
+    height: "100%", // 高さ
   },
   removeButton: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: 12,
-    padding: 4,
+    position: "absolute", // 絶対位置
+    top: 4, // 上位置
+    right: 4, // 右位置
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // 背景色
+    borderRadius: 12, // 角丸
+    padding: 4, // パディング
   },
   tagIndicator: {
-    position: "absolute",
-    bottom: 4,
-    right: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    position: "absolute", // 絶対位置
+    bottom: 4, // 下位置
+    right: 4, // 右位置
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // 背景色
+    borderRadius: 12, // 角丸
+    paddingHorizontal: 6, // 横パディング
+    paddingVertical: 2, // 縦パディング
+    flexDirection: "row", // 横並び
+    alignItems: "center", // 垂直方向の中央揃え
+    gap: 4, // 要素間の隙間
   },
   tagCount: {
-    color: "#fff",
-    fontSize: 12,
+    color: "#fff", // 文字色
+    fontSize: 12, // フォントサイズ
   },
 });

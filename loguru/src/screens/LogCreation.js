@@ -58,78 +58,99 @@ const DraggableElement = ({
   onRotateEnd, // 回転終了時のコールバック
   onScaleEnd, // スケール終了時のコールバック
 }) => {
+  // ドラッグの位置を管理するためのアニメーション値
   const pan = useRef(
     new Animated.ValueXY({ x: initialX, y: initialY })
   ).current;
-  const rotation = useRef(new Animated.Value(initialRotation)).current; // 回転角度を管理
-  const scale = useRef(new Animated.Value(initialScale)).current; // スケールを管理
-  const [isDragging, setIsDragging] = useState(false);
+  // 回転角度を管理するためのアニメーション値
+  const rotation = useRef(new Animated.Value(initialRotation)).current;
+  // スケールを管理するためのアニメーション値
+  const scale = useRef(new Animated.Value(initialScale)).current;
+  const [isDragging, setIsDragging] = useState(false); // ドラッグ中かどうかの状態
   const [isRotating, setIsRotating] = useState(false); // 回転中かどうかの状態
-  const [lastScale, setLastScale] = useState(initialScale);
-  const [baseScale, setBaseScale] = useState(initialScale);
-  const [pinchCenter, setPinchCenter] = useState({ x: 0, y: 0 });
-  const dragThreshold = 5;
+  const [lastScale, setLastScale] = useState(initialScale); // 最後のスケール値
+  const [baseScale, setBaseScale] = useState(initialScale); // 基本スケール値
+  const [pinchCenter, setPinchCenter] = useState({ x: 0, y: 0 }); // ピンチの中心点
+  const dragThreshold = 5; // ドラッグと認識するための閾値
+  const [isSelected, setIsSelected] = useState(false); // 選択状態を管理
 
+  // ドラッグ操作を管理するPanResponder
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => true, // 常にPanResponderを開始
     onPanResponderGrant: () => {
-      setIsDragging(false);
+      setIsDragging(false); // ドラッグ開始時にドラッグ状態をリセット
       pan.setOffset({
         x: pan.x._value,
         y: pan.y._value,
       });
     },
     onPanResponderMove: (_, gestureState) => {
+      // ドラッグの移動量が閾値を超えた場合にドラッグ状態をtrueに設定
       if (
         Math.abs(gestureState.dx) > dragThreshold ||
         Math.abs(gestureState.dy) > dragThreshold
       ) {
         setIsDragging(true);
       }
+      // ドラッグの移動をアニメーションで反映
       Animated.event([null, { dx: pan.x, dy: pan.y }], {
         useNativeDriver: false,
       })(_, gestureState);
     },
     onPanResponderRelease: (_, gestureState) => {
-      pan.flattenOffset();
+      pan.flattenOffset(); // オフセットをリセット
       if (isDragging) {
-        onDragEnd({ id, x: pan.x._value, y: pan.y._value });
+        onDragEnd({ id, x: pan.x._value, y: pan.y._value }); // ドラッグ終了時の処理
       } else {
-        onPress(id);
+        onPress(id); // ドラッグでない場合はクリック処理
       }
-      setIsDragging(false);
+      setIsDragging(false); // ドラッグ状態をリセット
     },
-    onPanResponderTerminationRequest: () => false,
-    onLongPress: () => onLongPress(id),
+    onPanResponderTerminationRequest: () => false, // 他のResponderに奪われないようにする
+    onLongPress: () => onLongPress(id), // 長押し時の処理
   });
 
+  // 回転操作を管理するPanResponder
   const rotateResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponder: () => true, // 常にPanResponderを開始
     onPanResponderMove: (_, gestureState) => {
-      setIsRotating(true);
+      setIsRotating(true); // 回転中の状態を設定
       const angle =
-        Math.atan2(gestureState.dy, gestureState.dx) * (180 / Math.PI);
-      rotation.setValue(angle);
+        Math.atan2(gestureState.dy, gestureState.dx) * (180 / Math.PI); // 回転角度を計算
+      rotation.setValue(angle); // 回転角度をアニメーションで設定
     },
     onPanResponderRelease: () => {
-      setIsRotating(false);
-      onRotateEnd({ id, rotation: rotation._value });
+      setIsRotating(false); // 回転中の状態をリセット
+      onRotateEnd({ id, rotation: rotation._value }); // 回転終了時の処理
     },
   });
 
+  // ピンチ操作を管理するイベントハンドラ
   const handlePinch = Animated.event(
     [{ nativeEvent: { scale: scale } }],
     { useNativeDriver: false }
   );
 
+  // ピンチ操作の状態変化を管理するハンドラ
   const handlePinchStateChange = (event) => {
     if (event.nativeEvent.state === State.BEGAN) {
       const { focalX, focalY } = event.nativeEvent;
-      setPinchCenter({ x: focalX, y: focalY });
+      setPinchCenter({ x: focalX, y: focalY }); // ピンチの中心点を設定
     } else if (event.nativeEvent.state === State.END) {
-      setLastScale(scale._value);
-      onScaleEnd({ id, scale: scale._value });
+      setLastScale(scale._value); // 最後のスケール値を保存
+      onScaleEnd({ id, scale: scale._value }); // スケール終了時の処理
     }
+  };
+
+  // 要素を押したときの処理
+  const handlePress = (id) => {
+    setIsSelected(true); // 要素が選択されたときに選択状態をtrueに設定
+    onPress(id);
+  };
+
+  // 要素を離したときの処理
+  const handleRelease = () => {
+    setIsSelected(false); // 要素が離されたときに選択状態をfalseに設定
   };
 
   return (
@@ -167,11 +188,16 @@ const DraggableElement = ({
             ],
           },
         ]}
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={() => handlePress(id)}
+        onResponderRelease={handleRelease}
       >
         {children}
-        <View {...rotateResponder.panHandlers} style={styles.rotateHandle}>
-          <RotateCw size={24} color="#333" />
-        </View>
+        {isSelected && ( // 選択されているときのみ回転ハンドルを表示
+          <View {...rotateResponder.panHandlers} style={styles.rotateHandle}>
+            <RotateCw size={24} color="#333" />
+          </View>
+        )}
       </Animated.View>
     </PinchGestureHandler>
   );
