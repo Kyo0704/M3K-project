@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Check, X, Search } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // サンプルの既存タグ（実際のアプリではAPIから取得）
 const existingTags = [
@@ -32,7 +33,7 @@ export default function PhotoTag() {
 
   // ルートパラメータから必要な情報を取得
   const {
-    imageUri, // 画像のURI
+    imageUri = require('../Photo/2.png'), // デフォルトのローカル画像を設定
     date, // 撮影日
     tags: initialTags = [], // 初期タグ（デフォルトは空配列）
     photoId, // 写真のID
@@ -77,30 +78,37 @@ export default function PhotoTag() {
   };
 
   // タグを保存する関数
-  const handleSave = () => {
-    // ここでタグをバックエンドに保存
-    console.log("Saving tags for photo:", { photoId, tags });
+  const handleSave = async () => {
+    try {
+      const storedPhotos = await AsyncStorage.getItem('photos');
+      const parsedPhotos = storedPhotos ? JSON.parse(storedPhotos) : [];
+      const updatedPhotos = parsedPhotos.map(photo => {
+        if (photo.id === photoId) {
+          return { ...photo, tags };
+        }
+        return photo;
+      });
+      await AsyncStorage.setItem('photos', JSON.stringify(updatedPhotos));
 
-    if (isEditing) {
-      // 編集モードの場合は写真一覧に戻る
-      navigation.navigate("PhotoScreen");
-    } else {
-      // 新規アップロードモードの場合
-      const remainingPhotos = route.params.remainingPhotos || [];
-      if (remainingPhotos.length > 0) {
-        // 次の写真がある場合
-        const nextPhoto = remainingPhotos[0];
-        navigation.replace("PhotoTag", {
-          imageUri: nextPhoto.uri,
-          date: nextPhoto.date || new Date().toISOString(),
-          remainingPhotos: remainingPhotos.slice(1),
-        });
+      if (isEditing) {
+        navigation.navigate("PhotoScreen");
       } else {
-        // すべての写真のタグ付けが完了した場合
-        Alert.alert("完了", "すべての写真のタグ付けが完了しました", [
-          { text: "OK", onPress: () => navigation.navigate("PhotoScreen") },
-        ]);
+        const remainingPhotos = route.params.remainingPhotos || [];
+        if (remainingPhotos.length > 0) {
+          const nextPhoto = remainingPhotos[0];
+          navigation.replace("PhotoTag", {
+            imageUri: nextPhoto.uri,
+            date: nextPhoto.date || new Date().toISOString(),
+            remainingPhotos: remainingPhotos.slice(1),
+          });
+        } else {
+          Alert.alert("完了", "すべての写真のタグ付けが完了しました", [
+            { text: "OK", onPress: () => navigation.navigate("PhotoScreen") },
+          ]);
+        }
       }
+    } catch (error) {
+      console.error('Failed to save tags to storage', error);
     }
   };
 
@@ -118,11 +126,10 @@ export default function PhotoTag() {
       <ScrollView style={styles.content}>
         {/* 画像を表示 */}
         <Image
-          source={{ uri: imageUri.toString() }}
+          source={{ uri: imageUri }} // URIをオブジェクト形式で渡す
           style={styles.image}
-          // エラー処理を追加
           onError={(error) => {
-            console.error("Image loading error:", error.nativeEvent.error);
+            console.error("Image loading error:", error.nativeEvent.error); // 画像読み込みエラーのログ
           }}
         />
         {/* 撮影日を表示 */}

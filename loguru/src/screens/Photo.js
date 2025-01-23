@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,55 +7,99 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Alert,
 } from 'react-native';
 import { Search, Tag as TagIcon } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// サンプルデータ（実際のアプリではAPIから取得）
 const samplePhotos = [
   {
     id: 1,
-    uri: 'https://github.com/Kyo0704/M3K-project/blob/origin/develop/logCreate/loguru/src/Photo/2.png',
+    uri: require('../Photo/2.png'),
     date: '2024/01/15',
     location: '京都',
     tags: ['京都', '神社', '伏見稲荷'],
   },
   {
     id: 2,
-    uri: 'https://github.com/Kyo0704/M3K-project/blob/origin/develop/logCreate/loguru/src/Photo/nara-tourist-spot_thumb.png',
+    uri: require('../Photo/nara-tourist-spot_thumb.png'),
     date: '2024/01/16',
     location: '奈良',
     tags: ['奈良', '寺院'],
   },
 ];
 
-// Photoコンポーネントの定義
 export default function Photo() {
-  const navigation = useNavigation(); // ナビゲーションフックを使用して画面遷移を管理
-  const [searchQuery, setSearchQuery] = useState(''); // 検索クエリの状態を管理
-  const [photos, setPhotos] = useState(samplePhotos); // 写真データの状態を管理
+  const navigation = useNavigation();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [photos, setPhotos] = useState([]);
 
-  // 検索クエリに基づいて写真をフィルタリング
+  useEffect(() => {
+    const loadPhotos = async () => {
+      try {
+        const storedPhotos = await AsyncStorage.getItem('photos');
+        if (storedPhotos) {
+          setPhotos(JSON.parse(storedPhotos));
+        }
+      } catch (error) {
+        console.error('Failed to load photos from storage', error);
+      }
+    };
+    loadPhotos();
+  }, []);
+
   const filteredPhotos = photos.filter(photo => {
     const query = searchQuery.toLowerCase();
-    return (
-      photo.location.toLowerCase().includes(query) || // 場所でフィルタリング
-      photo.tags.some(tag => tag.toLowerCase().includes(query)) // タグでフィルタリング
-    );
+    const location = photo.location ? photo.location.toLowerCase() : '';
+    const tags = photo.tags ? photo.tags.map(tag => tag.toLowerCase()) : [];
+    return location.includes(query) || tags.some(tag => tag.includes(query));
   });
 
-  // 写真がクリックされたときの処理
   const handlePhotoPress = (photo) => {
     navigation.navigate('PhotoTag', {
-      imageUri: photo.uri, // 画像のURIを渡す
-      date: photo.date, // 画像の日付を渡す
-      tags: photo.tags, // 画像のタグを渡す
-      photoId: photo.id, // 画像のIDを渡す
-      isEditing: true, // 編集モードであることを示す
+      imageUri: photo.uri,
+      date: photo.date,
+      tags: photo.tags,
+      photoId: photo.id,
+      isEditing: true,
     });
   };
 
-  // 写真がない場合の表示
+  const savePhoto = async (newPhoto) => {
+    try {
+      const updatedPhotos = [...photos, newPhoto];
+      setPhotos(updatedPhotos);
+      await AsyncStorage.setItem('photos', JSON.stringify(updatedPhotos));
+    } catch (error) {
+      console.error('Failed to save photo to storage', error);
+    }
+  };
+
+  const removePhoto = async (photoId) => {
+    try {
+      const storedPhotos = await AsyncStorage.getItem('photos');
+      const parsedPhotos = storedPhotos ? JSON.parse(storedPhotos) : [];
+      const updatedPhotos = parsedPhotos.filter(photo => photo.id !== photoId);
+      setPhotos(updatedPhotos);
+      await AsyncStorage.setItem('photos', JSON.stringify(updatedPhotos));
+    } catch (error) {
+      console.error('Failed to remove photo from storage', error);
+    }
+  };
+
+  const confirmDeletePhoto = (photoId) => {
+    Alert.alert(
+      "確認",
+      "この画像を削除してもよろしいですか？",
+      [
+        { text: "キャンセル", style: "cancel" },
+        { text: "削除", onPress: () => removePhoto(photoId), style: "destructive" },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyStateText}>写真がありません</Text>
@@ -67,53 +111,57 @@ export default function Photo() {
 
   return (
     <View style={styles.container}>
-      {/* ヘッダー部分 */}
       <View style={styles.header}>
         <View style={styles.searchContainer}>
-          <Search size={20} color="#666" /> {/* 検索アイコン */}
+          <Search size={20} color="#666" />
           <TextInput
             style={styles.searchInput}
             value={searchQuery}
-            onChangeText={setSearchQuery} // 検索クエリの更新
+            onChangeText={setSearchQuery}
             placeholder="場所やタグで検索"
             placeholderTextColor="#999"
           />
         </View>
         <TouchableOpacity
           style={styles.uploadButton}
-          onPress={() => navigation.navigate('PhotoUpload')} // 写真アップロード画面に遷移
+          onPress={() => navigation.navigate('PhotoUpload')}
         >
           <Text style={styles.uploadButtonText}>写真アップロード</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 写真表示部分 */}
       <ScrollView style={styles.content}>
         {filteredPhotos.length === 0 ? (
-          renderEmptyState() // 写真がない場合の表示
+          renderEmptyState()
         ) : (
           <View style={styles.photoGrid}>
             {filteredPhotos.map((photo) => (
-              <TouchableOpacity
-                key={photo.id}
-                style={styles.photoContainer}
-                onPress={() => handlePhotoPress(photo)} // 写真がクリックされたときの処理
-              >
-                <Image 
-                  source={{ uri: photo.uri }} 
-                  style={styles.photo}
-                  onError={(error) => {
-                    console.error('Image loading error:', error.nativeEvent.error); // 画像読み込みエラーのログ
-                  }}
-                />
-                <View style={styles.photoInfo}>
-                  <Text style={styles.photoDate}>{photo.date}</Text> {/* 写真の日付 */}
-                  <View style={styles.tagContainer}>
-                    <TagIcon size={12} color="#fff" /> {/* タグアイコン */}
-                    <Text style={styles.tagCount}>{photo.tags.length}</Text> {/* タグ数表示 */}
+              <View key={photo.id} style={styles.photoContainer}>
+                <TouchableOpacity
+                  onPress={() => handlePhotoPress(photo)}
+                >
+                  <Image 
+                    source={{ uri: photo.uri }}
+                    style={styles.photo}
+                    onError={(error) => {
+                      console.error("Image loading error:", error.nativeEvent.error);
+                    }}
+                  />
+                  <View style={styles.photoInfo}>
+                    <Text style={styles.photoDate}>{photo.date}</Text>
+                    <View style={styles.tagContainer}>
+                      <TagIcon size={12} color="#fff" />
+                      <Text style={styles.tagCount}>{photo.tags.length}</Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => confirmDeletePhoto(photo.id)}
+                >
+                  <Text style={styles.deleteButtonText}>削除</Text>
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         )}
@@ -223,5 +271,17 @@ const styles = StyleSheet.create({
     fontSize: 14, // フォントサイズ
     color: '#999', // 文字色
     textAlign: 'center', // 中央揃え
+  },
+  deleteButton: {
+    backgroundColor: '#ff4444', // 削除ボタンの背景色
+    padding: 8, // パディング
+    borderRadius: 8, // 角丸
+    alignItems: 'center', // 水平方向の中央揃え
+    marginTop: 8, // 上マージン
+  },
+  deleteButtonText: {
+    color: '#fff', // 文字色
+    fontSize: 14, // フォントサイズ
+    fontWeight: '500', // フォントの太さ
   },
 });

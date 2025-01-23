@@ -15,6 +15,7 @@ import mapStyle from "./raw/map_style.json";
 import LogCreation from "./LogCreation";
 import styles from "./CSS/RouteMapStyle";
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import axios from 'axios';
 
 export default function RouteMap() {
   const route = useRoute(); // 現在のルート情報を取得
@@ -41,58 +42,35 @@ export default function RouteMap() {
   useEffect(() => {
     const loadMarkers = async () => {
       try {
-        // マーカーをリセット
-        setMarkers([]);
+        const response = await axios.get('http://10.108.1.231:3000/user_locations'); //一号館
+       // const response = await axios.get('http://10.200.4.200:3000/user_locations');
+        const gpsData = response.data;
 
-        const storedMarkers = await AsyncStorage.getItem("markers");
-        let loadedMarkers = storedMarkers ? JSON.parse(storedMarkers) : [];
+        const routeCoords = gpsData.map((point) => ({
+          latitude: parseFloat(point.latitude),
+          longitude: parseFloat(point.longitude),
+        }));
 
-        if (gpsData) {
-          // GPSデータからルート座標を生成
-          const routeCoords = gpsData.map((point) => ({
-            latitude: point.coordinates.latitude,
-            longitude: point.coordinates.longitude,
-          }));
-          // GPSデータからマーカー情報を生成
-          const markersData = gpsData.map((point, index) => ({
-            id: `gps-${index}-${point.coordinates.latitude}-${
-              point.coordinates.longitude
-            }-${new Date(point.timestamp).getTime()}`,
-            coordinate: {
-              latitude: point.coordinates.latitude,
-              longitude: point.coordinates.longitude,
-            },
-            title: `Day ${point.day}`,
-            description: new Date(point.timestamp).toLocaleDateString(),
-          }));
+        const markersData = gpsData.map((point, index) => ({
+          id: `gps-${index}-${point.latitude}-${point.longitude}-${new Date(point.visited_at).getTime()}`,
+          coordinate: {
+            latitude: parseFloat(point.latitude),
+            longitude: parseFloat(point.longitude),
+          },
+          title: `Day ${index + 1}`,
+          description: new Date(point.visited_at).toLocaleDateString(),
+        }));
 
-          setRouteCoordinates(routeCoords); // ルート座標を設定
+        setRouteCoordinates(routeCoords);
+        setMarkers(markersData);
 
-          if (routeCoords.length > 0) {
-            // ルートの最初の座標を初期表示領域に設定
-            setInitialRegion({
-              latitude: routeCoords[0].latitude,
-              longitude: routeCoords[0].longitude,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            });
-          } else {
-            // デフォルトの初期表示領域を設定（京都）
-            setInitialRegion({
-              latitude: 35.0116, // 京都の緯度
-              longitude: 135.7681, // 京都の経度
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            });
-          }
-
-          // 永続化されたマーカーと新しいマーカーを結合し、重複を排除
-          const allMarkers = [...loadedMarkers, ...markersData];
-          const uniqueMarkers = Array.from(
-            new Map(allMarkers.map((marker) => [marker.id, marker])).values()
-          );
-
-          setMarkers(uniqueMarkers); // ユニークなマーカーを設定
+        if (routeCoords.length > 0) {
+          setInitialRegion({
+            latitude: routeCoords[0].latitude,
+            longitude: routeCoords[0].longitude,
+            latitudeDelta: 0.02,
+            longitudeDelta: 0.02,
+          });
         }
       } catch (error) {
         console.error("マーカーのロードエラー:", error);
@@ -100,11 +78,11 @@ export default function RouteMap() {
     };
 
     loadMarkers();
+  }, []); // 依存関係を空にして初回のみ実行
 
-    return () => {
-      setMarkers([]); // コンポーネントのアンマウント時にマーカーをリセット
-    };
-  }, [gpsData, passedRegion]);
+  useEffect(() => {
+    console.log("Markers loaded:", markers);
+  }, [markers]);
 
   // マーカーを永続化
   const saveMarkers = async (updatedMarkers) => {
@@ -196,8 +174,11 @@ export default function RouteMap() {
 
   // ピン追加モードを切り替え
   const toggleAddPin = () => {
-    setIsAddingPin(!isAddingPin); // ピン追加モードをトグル
-    setShowNewMarkerInput(false); // モード切替時に入力フィールドを非表示
+    setIsAddingPin(!isAddingPin);
+    setShowNewMarkerInput(false);
+    setNewMarkerTitle(""); // タイトルをリセット
+    setNewMarkerDescription(""); // 説明をリセット
+    setNewMarkerCoordinate(null); // 座標をリセット
   };
 
   // 例えば、マーカーを選択した後にNewCreateに戻る場合

@@ -8,11 +8,13 @@ import {
   TextInput,
   Pressable,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { format } from 'date-fns';
 
 // アバターコンポーネント
 const Avatar = ({ uri, size = 40 }) => (
@@ -29,30 +31,32 @@ export default function LogeCreate() {
   const navigation = useNavigation();
 
   useEffect(() => {
-    // ここでデータベースからログデータを取得する
-    // fetchTravelLogs().then(setTravelLogs);
-    // 現在はダミーデータを使用
-    const dummyLogs = [
-      {
-        id: '1',
-        title: '北海道旅行',
-        date: '2023-12-20',
-        members: ['田中', '佐藤', '園下'],
-        image: 'https://find47.jp/ja/i/HiRGD',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=田中',
-      },
-      {
-        id: '2',
-        title: '沖縄旅行',
-        date: '2023-11-15',
-        members: ['山田', '鈴木'],
-        image: 'https://find47.jp/ja/i/cQQMQ',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/png?seed=山田',
-      },
-      // 他のログデータ...
-    ];
-    setTravelLogs(dummyLogs);
+    fetchTravelLogs();
   }, []);
+
+  // APIからログデータを取得する
+  const fetchTravelLogs = async () => {
+    try {
+      const response = await axios.get('http://10.108.1.231:3000/travel_logs'); //一号館
+      //const response = await axios.get('http://10.200.4.200:3000/travel_logs'); //二号館
+      setTravelLogs(response.data);
+    } catch (error) {
+      console.error('Error fetching travel logs:', error);
+    }
+  };
+
+  // ログを削除する関数
+  const deleteLog = async (logId) => {
+    try {
+      await axios.delete(`http://10.108.1.231:3000/travel_logs/${logId}`); //一号館
+      //await axios.delete(`http://10.200.4.200:3000/travel_logs/${logId}`); //二号館
+      Alert.alert("削除成功", "ログが正常に削除されました。");
+      fetchTravelLogs(); // 状態を更新してUIをリフレッシュ
+    } catch (error) {
+      console.error('Error deleting log:', error);
+      Alert.alert("削除エラー", "ログの削除中にエラーが発生しました。");
+    }
+  };
 
   const handleCreateLog = () => {
     navigation.navigate('NewCreate');
@@ -60,12 +64,17 @@ export default function LogeCreate() {
 
   const sortLogs = (logs) => {
     if (activeTab === '新規順') {
-      return [...logs].sort((a, b) => b.id.localeCompare(a.id));
+      return [...logs].sort((a, b) => {
+        if (a.log_id && b.log_id) {
+          return b.log_id.localeCompare(a.log_id);
+        }
+        return 0;
+      });
     } else {
-      return [...logs].sort((a, b) => new Date(b.date) - new Date(a.date));
+      return [...logs].sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
     }
   };
-//検索機能の処理
+
   const filterLogs = (logs) => {
     return logs.filter(log => 
       log.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -75,7 +84,6 @@ export default function LogeCreate() {
 
   const sortedLogs = sortLogs(filterLogs(travelLogs));
 
-  //検索・タブによるソート・新規作成画面遷移機能の実装
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.searchContainer}>
@@ -105,30 +113,47 @@ export default function LogeCreate() {
       </View>
 
       <ScrollView style={styles.scrollView}>
-        {sortedLogs.map((log) => (
+        {sortedLogs.map(log => (
           <Pressable
             key={log.id}
             style={styles.card}
-            onPress={() => {/* ログの詳細画面へ遷移 */}}
+            onPress={() => navigation.navigate('RouteMap', { logId: log.id })}
           >
             <Image
-              source={{ uri: log.image }}
+              source={{ uri: log.thumbnail }}
               style={styles.cardImage}
               resizeMode="cover"
             />
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>{log.title}</Text>
-              <Text style={styles.cardDate}>{log.date}</Text>
+              <Text style={styles.cardDate}>
+                {format(new Date(log.start_date), 'yyyy年MM月dd日')} - {format(new Date(log.end_date), 'yyyy年MM月dd日')}
+              </Text>
               <View style={styles.memberContainer}>
                 <Text style={styles.memberLabel}>メンバー：</Text>
                 <Text style={styles.memberText}>
-                  {log.members.join('、')}
+                  {log.members.join(', ')}
                 </Text>
               </View>
-              <View style={styles.avatarContainer}>
-                <Avatar uri={log.avatar} size={24} />
-                <Text style={styles.avatarName}>{log.members[0]}</Text>
-              </View>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => {
+                  Alert.alert(
+                    "削除確認",
+                    "このログを削除してもよろしいですか？",
+                    [
+                      { text: "キャンセル", style: "cancel" },
+                      {
+                        text: "削除",
+                        onPress: () => deleteLog(log.id),
+                        style: "destructive",
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Text style={{ color: 'red' }}>削除</Text>
+              </TouchableOpacity>
             </View>
           </Pressable>
         ))}
@@ -233,6 +258,7 @@ const styles = StyleSheet.create({
   avatarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
   avatar: {
     borderRadius: 999,
@@ -241,6 +267,10 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: '#666',
+  },
+  deleteButton: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
   },
   fab: {
     position: 'absolute',

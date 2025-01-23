@@ -10,12 +10,14 @@ import {
 import { MapPin } from "lucide-react-native";
 import * as Location from "expo-location";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import axios from 'axios'; // axiosをインポート
 
 export default function GPSConfirmation() {
   const navigation = useNavigation(); // React Navigationのナビゲーションフックを使用して、画面遷移を管理
   const route = useRoute(); // 現在のルート情報を取得するためのフック
   const [isLoading, setIsLoading] = useState(false); // ローディング状態を管理するためのステート
   const [modalVisible, setModalVisible] = useState(true); // モーダルの表示状態を管理するためのステート
+  const [sentCoordinates, setSentCoordinates] = useState(new Set()); // 送信済み座標を追跡
 
   useEffect(() => {
     // コンポーネントがマウントされたときに実行される
@@ -27,8 +29,8 @@ export default function GPSConfirmation() {
   const KYOTO_COORDINATES = {
     latitudeBase: 35.0116, // 京都の緯度
     longitudeBase: 135.7681, // 京都の経度
-    latitudeOffset: 0.02, // 緯度の変動範囲
-    longitudeOffset: 0.02, // 経度の変動範囲
+    latitudeOffset: 0.005, // 緯度の変動範囲を小さくする
+    longitudeOffset: 0.005, // 経度の変動範囲を小さくする
   };
 
   const handleYes = async () => {
@@ -86,21 +88,41 @@ export default function GPSConfirmation() {
             )
           )
         ).map((uniqueKey) => {
-          const [latitude, longitude, timestamp] = uniqueKey.split(",");// ユニークなキーを分割
+          const [latitude, longitude, timestamp] = uniqueKey.split(",");
           return {
             day: gpsData.find(
               (point) =>
-                point.coordinates.latitude === parseFloat(latitude) && // 緯度が一致
-                point.coordinates.longitude === parseFloat(longitude) && // 経度が一致
-                point.timestamp === timestamp // タイムスタンプが一致
+                point.coordinates.latitude === parseFloat(latitude) &&
+                point.coordinates.longitude === parseFloat(longitude) &&
+                point.timestamp === timestamp
             ).day,
-            timestamp, // タイムスタンプ
+            timestamp,
             coordinates: {
               latitude: parseFloat(latitude),
               longitude: parseFloat(longitude),
             },
           };
         });
+
+        // 新しいデータのみを送信
+        const newGpsData = gpsData.filter((point) => {
+          const coordKey = `${point.coordinates.latitude},${point.coordinates.longitude}`;
+          return !sentCoordinates.has(coordKey);
+        });
+
+        for (const point of newGpsData) {
+          await axios.post('http://10.108.1.231:3000/user_locations', {
+            user_id: 'some_user_id', // ユーザーIDを適切に設定
+            visited_at: point.timestamp,
+            location_id: `loc-${point.day}`,
+            latitude: point.coordinates.latitude.toString(),
+            longitude: point.coordinates.longitude.toString(),
+            location_name: `Location ${point.day}`,
+          });
+          // 送信済み座標を記録
+          const coordKey = `${point.coordinates.latitude},${point.coordinates.longitude}`;
+          setSentCoordinates((prev) => new Set(prev).add(coordKey));
+        }
       }
 
       // GPSデータ確認
