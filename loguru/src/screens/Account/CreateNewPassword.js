@@ -12,6 +12,8 @@ import { useCallback } from 'react';
 import { ScrollView } from 'react-native-gesture-handler';
 import * as ImagePicker from 'expo-image-picker';
 import { TextInput } from 'react-native';
+import { resetPassword } from 'aws-amplify/auth';
+import { confirmResetPassword } from 'aws-amplify/auth';
 
 export default function CreateNewPassword() {
   const [userId, setUserId] = useState()
@@ -22,12 +24,14 @@ export default function CreateNewPassword() {
   const [isAllFieldsFilled, setIsAllFieldsFIlled] = useState(true)
   const [isError, setIsError] = useState(false)
   const navigation = useNavigation()
+  let email = ''
 
   // 画面がフォーカスされた際に実行
   useFocusEffect(
     useCallback(() => {
       (async () => {
         await checkLogin()
+        await sendCode()
       })()
     }, [])
   )
@@ -36,12 +40,24 @@ export default function CreateNewPassword() {
   const checkLogin = async () => {
     try {
       const value = await AsyncStorage.getItem("userId")
-      setUserId(value)
+      email = value
       if (!value) {
         navigation.navigate('SignIn')
       }
     } catch (error) {
-      console.error("AsyncStorageでエラー：", error)
+      console.log("[error]AsyncStorageエラー:", error)
+    }
+  }
+
+  // 認証コードの送信
+  const sendCode = async () => {
+    try {
+      await resetPassword({
+        username: email
+      });
+      console.log("認証コードを送信しました。")
+    } catch (error) {
+      console.log("[error]認証コード送信エラー:", error)
     }
   }
 
@@ -70,27 +86,16 @@ export default function CreateNewPassword() {
 
   const sendChangePassword = async () => {
     try {
-      const data = { userId: userId, authCode: authCode, afterPassword: afterPassword }
-      console.log(data)
-      let url = new URL('http://10.65.10.82:3000/changePassword')
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data })
-      });
-
-      if (response.ok) {
-        navigation.navigate('AccountDetails')
-        setIsError(false)
-      } else {
-        console.error("API処理に失敗しました：", response.status)
-        setIsError(true)
-      }
+      await confirmResetPassword({
+        username: email,
+        confirmationCode: authCode,
+        newPassword: afterPassword,
+      })
+      setIsError(false)
+      console.log("コード認証 成功")
     } catch (error) {
-      console.error("サインイン処理に失敗", error)
       setIsError(true)
+      cosnole.log("[error]コード認証エラー:", error)
     }
   }
 

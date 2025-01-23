@@ -4,7 +4,9 @@
       "@/*":[
         "./*"
       ]
-    }
+    },
+    "noImplicitAny": false, // 必要に応じて変更
+    "types": ["react", "react-native", "react-native-reanimated"]
   },
   "extends": "expo/tsconfig.base"  
 }

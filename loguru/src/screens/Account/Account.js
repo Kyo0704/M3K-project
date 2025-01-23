@@ -5,12 +5,11 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import React, { useState } from 'react';
-import { View, Text, Pressable, ImageBackground, Image } from 'react-native';
-import { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { View, Text, Pressable, ImageBackground, Image, StyleSheet } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native'; // StyleSheetをインポート
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // 使用するアイコンセットを指定
+import { signOut } from 'aws-amplify/auth';
 
 export default function Home() {
   const [userData, setUserData] = useState()
@@ -37,7 +36,7 @@ export default function Home() {
         navigation.navigate('SignIn');
       }
     } catch (error) {
-      console.error('AsyncStorageでエラー：', error);
+      console.log("[error]AsyncStorageエラー:", error)
     }
   }
 
@@ -57,28 +56,33 @@ export default function Home() {
           const data = await response.json()
           setUserData(data[0])
         } catch (error) {
-          console.error("JSONのパースに失敗:", error)
+          console.log("[error]JSONエラー：", error)
         }
       } else {
-        console.error("レスポンスエラー:", response.status)
+        console.log("[error]レスポンスエラー:", error)
       }
     } catch (error) {
-      console.error("fetch処理でエラー：", error)
+      console.log("[error]fetchエラー:", error)
     }
   }
 
   // サインアウト
   const signout = async () => {
     try {
-      await AsyncStorage.removeItem("userName")
+      await signOut()
+      await AsyncStorage.removeItem("userId")
       navigation.navigate('SignIn')
     } catch (error) {
-      console.error('Error delete data', error)
+      console.log("[error]サインアウトエラー:", error)
     }
   }
 
   const onPressAccountData = () => {
     navigation.navigate('AccountDetails')
+  }
+
+  const onPressLikeList = () => {
+    navigation.navigate('LikeList')
   }
 
   return (
@@ -110,7 +114,7 @@ export default function Home() {
         </View>
       </Pressable>
       {/* いいね一覧 */}
-      <Pressable>
+      <Pressable onPress={onPressLikeList}>
         <View className='flex flex-row items-center justify-center mx-auto my-4 w-9/12 bg-orange-100 h-24 rounded-2xl'>
           <Icon name="cards-heart" size={36} color="black" />
           <Text className='text-xl text-center font-bold ml-5'>いいね一覧</Text>

@@ -8,7 +8,7 @@ import React, { useState } from "react"
 import '@/global.css'
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { signUp } from "aws-amplify/auth"
 
 export default function SignUp() {
   const [userName, setUserName] = useState('')  // ユーザーネーム
@@ -58,40 +58,29 @@ export default function SignUp() {
 
   // サインアップ情報送信
   const sendSignUp = async () => {
-    onLoginSuccess()  // テスト用（実際には削除）
     try {
-      const data = { userName: userName, email: email, password: password}
-      const response = await fetch('/api/sign-up', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      await signUp({
+        username: userName,
+        password: password,
+        options: {
+          userAttributes: {
+            name: userName,
+            email: email,
+          },
         },
-        body: JSON.stringify({ data })
-      });
-
-      if (response.ok) {
-        console.errro("サインアップ処理に成功")
-        setErrorProcessFlag(false)
-      } else {
-        console.error("API処理に失敗しました：", response.status)
-        setErrorProcessFlag(true)
-      }
+      })
+      console.log("サインアップ処理が完了")
+      setErrorProcessFlag(false)
+      onLoginSuccess()
     } catch (error) {
-      console.error("サインアップ処理に失敗：", error)
       setErrorProcessFlag(true)
+      console.log("[error]サインアップエラー:", error)
     }
   }
 
   // ログイン処理が成功したときの処理
   const onLoginSuccess = async () => {
-    // AsyncStorageにユーザー情報を格納し、メインタブに遷移
-    try {
-      await AsyncStorage.setItem("userId", "1")  // (テスト用)実際にはバックエンドから返されるuser_idを格納
-      navigation.navigate('MainTabs')
-    } catch (error) {
-      console.error('Error write data:', error)
-      console.error("AsyncStorageエラー：", error)
-    }
+    navigation.navigate('ConfirmSignUp', { email })
   }
 
   // サインインページに遷移する
@@ -120,7 +109,6 @@ export default function SignUp() {
         </View>
       )
     }
-
   }
 
   return (

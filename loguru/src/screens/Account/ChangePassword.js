@@ -40,7 +40,7 @@ export default function ChangePassword() {
         navigation.navigate('SignIn')
       }
     } catch (error) {
-      console.error("AsyncStorageでエラー：", error)
+      console.log("[error]AsyncStorageエラー:", error)
     }
   }
 
@@ -83,18 +83,18 @@ export default function ChangePassword() {
         navigation.navigate('AccountDetails')
         setIsError(false)
       } else {
-        console.error("API処理に失敗しました：", response.status)
+        console.log("[error]APIエラー:", response.status)
         setIsError(true)
       }
     } catch (error) {
-      console.error("サインイン処理に失敗", error)
+      console.log("[error]パスワード変更エラー:", error)
       setIsError(true)
     }
   }
 
   // パスワードを忘れた時
   const onPressForgotPassword = () => {
-    navigation.navigate('CheckEmail')
+    navigation.navigate('CreateNewPassword')
   }
 
   // 戻るボタンが押された時

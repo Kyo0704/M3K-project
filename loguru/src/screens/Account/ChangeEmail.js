@@ -39,7 +39,7 @@ export default function ChangeEmail() {
         navigation.navigate('SignIn')
       }
     } catch (error) {
-      console.error("AsyncStorageでエラー：", error)
+      console.log("[error]AsyncStorageエラー:", error)
     }
   }
 
@@ -59,13 +59,13 @@ export default function ChangeEmail() {
           const data = await response.json()
           setUserData(data[0])
         } catch (error) {
-          console.error("JSONのパースに失敗:", error)
+          console.log("[error]JSONエラー:", error)
         }
       } else {
-        console.error("レスポンスエラー:", response.status)
+        console.log("[error]レスポンスエラー:", response.status)
       }
     } catch (error) {
-      console.error("fetch処理でエラー：", error)
+      console.log("[error]fetchエラー：", error)
     }
   }
 
@@ -88,11 +88,11 @@ export default function ChangeEmail() {
         if (response.ok) {
           // navigation.navigate('AccountDetails')
         } else {
-          console.error("API処理に失敗しました：", response.status)
+          console.log("[error]APIエラー:", response.status)
           setIsError(true)
         }
       } catch (error) {
-        console.error("サインイン処理に失敗", error)
+        console.log("[error]メールアドレス変更エラー:", error)
         setIsError(true)
       }
     } else {

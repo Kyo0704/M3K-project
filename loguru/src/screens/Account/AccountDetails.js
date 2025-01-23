@@ -38,7 +38,7 @@ export default function AccountDetails() {
         navigation.navigate('SignIn')
       }
     } catch (error) {
-      console.error("AsyncStorageでエラー：", error)
+      console.log("[error]AsyncStorageエラー:", error)
     }
   }
 
@@ -68,13 +68,13 @@ export default function AccountDetails() {
           const data = await response.json()
           setUserData(data[0])
         } catch (error) {
-          console.error("JSONのパースに失敗:", error)
+          console.log("[error]JSONエラー:", error)
         }
       } else {
-        console.error("レスポンスエラー:", response.status)
+        console.log("[error]レスポンスエラー:", response.status)
       }
     } catch (error) {
-      console.error("fetch処理でエラー：", error)
+      console.log("[error]fetchエラー:", error)
     }
   }
 
@@ -92,7 +92,7 @@ export default function AccountDetails() {
       setChangeIcon(result.assets[0].uri);
       sendIcon()
     } else {
-      console.error("画像が正しく選択されませんでした。")
+      console.log("[error]画像が正しく選択されませんでした。")
     }
   }
 
@@ -119,10 +119,10 @@ export default function AccountDetails() {
       if (response.ok) {
 
       } else {
-        console.error("API処理でエラー：", response.status)
+        console.log("[error]APIエラー:", response.status)
       }
     } catch (error) {
-      console.error("fetch処理でエラー", error)
+      console.log("[error]fetchエラー:", error)
     }
   }
 

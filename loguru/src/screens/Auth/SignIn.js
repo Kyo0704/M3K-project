@@ -8,10 +8,11 @@ import React, { useState } from "react"
 import { useNavigation } from "@react-navigation/native";
 import '@/global.css'
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signIn } from "aws-amplify/auth"
 
 
 export default function SignIn() {
-  const [userName, setUserName] = useState('')  // ユーザーネーム
+  const [email, setEmail] = useState('')  // ユーザーネーム
   const [password, setPassword] = useState('')  // パスワード
   const [errorAllItemsFlag, setErrorAllItemsFlag] = useState(false)  // 必須項目入力フラグ
   const [errorProcessFlag, setErrorProcessFlag] = useState(false) // API処理エラー用
@@ -29,7 +30,7 @@ export default function SignIn() {
   // サインインが押された時の処理
   const onPressSignIn = async () => {
     // すべての項目に対して入力されているかのチェック
-    if (userName == '' || password == '') {
+    if (email == '' || password == '') {
       setErrorAllItemsFlag(true)
     } else {
       setErrorAllItemsFlag(false)
@@ -39,44 +40,35 @@ export default function SignIn() {
 
   // サインイン情報送信
   const sendSignIn = async () => {
-    onLoginSuccess()  // テスト用（実際には削除する）
     try {
-      const data = { userName: userName, password: password }
-      const response = await fetch('/api/sign-in', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data })
-      });
-
-      if (response.ok) {
-        setErrorProcessFlag(false)
-        onLoginSuccess()
-      } else {
-        console.error("API処理に失敗しました：", response.status)
-        setErrorProcessFlag(true)
-      }
+      const { nextStep } = await signIn({
+        username: email,
+        password: password,
+      })
+      console.log("サインイン処理が完了")
+      setErrorProcessFlag(false)
+      onLoginSuccess()
     } catch (error) {
-      console.error("サインイン処理に失敗", error)
+      console.log("[error]サインインエラー:", error)
       setErrorProcessFlag(true)
     }
   }
 
   // ログイン処理が成功したときの処理
   const onLoginSuccess = async () => {
-    // AsyncStorageにユーザー情報を格納し、メインタブに遷移
     try {
-      await AsyncStorage.setItem("userId", "1")  // （テスト用）実際にはバックエンドから返ってくるuser_idを格納
+      const { username, userId, signInDetails } = await getCurrentUser();
+      await AsyncStorage.setItem("userId", username)
       navigation.navigate('MainTabs')
     } catch (error) {
-      console.error("AsyncStorageエラー", error)
+      console.log("[error]AsyncStorageエラー:", error)
     }
   }
 
   // サインアップページへの遷移処理
   const gotoSignUp = () => {
     navigation.navigate('SignUp')
+    // navigation.navigate('ConfirmSignUp')
   }
 
   // サインアップフォームエラー表示
@@ -115,13 +107,13 @@ export default function SignIn() {
               <View className="space-y-6">
                 {/* ユーザーネーム*/}
                 <View>
-                  <Text className="bg-white/50 rounded-3xl max-w-fit px-2 block text-sm font-medium leading-6 text-balance">UserName</Text>
+                  <Text className="bg-white/50 rounded-3xl max-w-fit px-2 block text-sm font-medium leading-6 text-balance">Email</Text>
                   <View className="mt-2">
                     <TextInput
-                      id="uname"
-                      autoComplete="username"
+                      id="email"
+                      autoComplete="email"
                       className="pl-3 block w-full rounded-md border-0 bg-white py-3 shadow-sm ring-1 ring-inset ring-red-500 focus:ring-2 focus:ring-inset focus:ring-balck sm:text-sm sm:leading-6"
-                      onChangeText={setUserName}
+                      onChangeText={setEmail}
                     />
                   </View>
                 </View>

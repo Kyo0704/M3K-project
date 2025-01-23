@@ -71,20 +71,48 @@
     {
       "user_id": 1,
       "name": "Taro Tanaka",
-      "mailAddress":"sample@sample.com",
+      "mailAddress": "sample@sample.com",
       "profile_image": "https://placehold.jp/150x150.png"
     }
   ],
-  "homeLog":[
+  "homeLog": [
     {
-      "log_id":1,
-      "title":"京都旅行",
-      "thumbnail":"https://placehold.jp/150x150.png"
+      "log_id": 1,
+      "title": "京都旅行",
+      "thumbnail": "https://www.free-materials.com/adm/wp-content/uploads/2024/12/adpDSC_6067amn-.jpg"
     },
     {
-      "log_id":2,
-      "title":"北海道旅行",
-      "thumbnail":"https://placehold.jp/150x150.png"
+      "log_id": 2,
+      "title": "北海道旅行",
+      "thumbnail": "http://photo.hokkaido-blog.com/photo-l/01/douchou.jpg"
+    }
+  ],
+  "LikeLog": [
+    {
+      "log_id": 1,
+      "title": "京都旅行",
+      "date": "10/10～10/13",
+      "members": [
+        "鈴木",
+        "斎藤",
+        "木下"
+      ],
+      "thumbnail": "https://placehold.jp/150x150.png",
+      "author": "SUZUKI TAROU",
+      "profile_image": "https://placehold.jp/150x150.png"
+    },
+    {
+      "log_id": 2,
+      "title": "大阪旅行",
+      "date": "01/01～01/12",
+      "members": [
+        "田中",
+        "中田",
+        "中々"
+      ],
+      "thumbnail": "https://placehold.jp/150x150.png",
+      "author": "中々 多田",
+      "profile_image": "https://placehold.jp/150x150.png"
     }
   ]
 }

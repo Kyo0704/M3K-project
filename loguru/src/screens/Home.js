@@ -9,7 +9,6 @@ import { View, ImageBackground, StyleSheet, Dimensions, Image, Text, ScrollView 
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback } from 'react';
-import "@/global.css"
 
 export default function Home() {
   const [screenWidth, setScreenWidth] = useState(Dimensions.get('window').width);  // 画面幅を取得
@@ -47,13 +46,13 @@ export default function Home() {
           const data = await response.json()
           setHomeLogData(data)
         } catch (error) {
-          console.error("JSONのパースに失敗:", error)
+          console.log("[error]JSONエラー：", error)
         }
       } else {
-        console.error("レスポンスエラー:", response.status)
+        console.log("[error]レスポンスエラー:", error)
       }
     } catch (error) {
-      console.error("fetch処理でエラー：", error)
+      console.log("[error]fetchエラー:", error)
     }
   }
 
@@ -65,7 +64,7 @@ export default function Home() {
         navigation.navigate('SignIn');
       }
     } catch (error) {
-      console.error("AsyncStorageエラー：", error)
+      console.log("[error]AsyncStorageエラー：", error)
     }
   }
 

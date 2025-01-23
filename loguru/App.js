@@ -24,8 +24,38 @@ import SignUp from './src/screens/Auth/SignUp';
 import ChangeUserName from './src/screens/Account/ChangeUserName'
 import ChangePassword from './src/screens/Account/ChangePassword'
 import ChangeEmail from './src/screens/Account/ChangeEmail'
-import CheckEmail from './src/screens/Account/CheckEmail'
 import CreateNewPassword from './src/screens/Account/CreateNewPassword';
+import LikeList from './src/screens/Account/LikeList'
+import ConfirmSignUp from './src/screens/Auth/ConfirmSignUp'
+
+import { Amplify } from "aws-amplify";
+
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId: "us-east-1_Epk4lePw5",
+      userPoolClientId: "2f6b0r0u1rm3t4stb6ksaomjo5",
+      // identityPoolId: "<your-cognito-identity-pool-id>",
+      loginWith: {
+        email: true,
+      },
+      signUpVerificationMethod: "code",
+      userAttributes: {
+        email: {
+          required: true,
+        },
+      },
+      allowGuestAccess: true,
+      passwordFormat: {
+        minLength: 8,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireNumbers: true,
+        requireSpecialCharacters: true,
+      },
+    },
+  },
+})
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -146,13 +176,13 @@ function AccountStack() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="CheckEmail"
-        component={CheckEmail}
+        name="CreateNewPassword"
+        component={CreateNewPassword}
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="CreateNewPassword"
-        component={CreateNewPassword}
+        name="LikeList"
+        component={LikeList}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
@@ -255,6 +285,11 @@ export default function App() {
           name="SignUp"
           component={SignUp}
           options={{ title: 'サインアップ', headerShown: false }}
+        />
+        <Stack.Screen
+          name="ConfirmSignUp"
+          component={ConfirmSignUp}
+          options={{ title: 'サンアップ確認', headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>

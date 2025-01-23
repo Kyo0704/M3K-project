@@ -5,13 +5,9 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import React, { useState } from 'react';
-import { View, Text, Pressable, Image } from 'react-native';
-import { useCallback } from 'react';
-import { ScrollView } from 'react-native-gesture-handler';
-import * as ImagePicker from 'expo-image-picker';
-import { TextInput } from 'react-native';
-import '@/global.css'
+import React, { useState, useCallback } from 'react';
+import { View, Text, Pressable, TextInput } from 'react-native';
+import { updateUserAttribute } from 'aws-amplify/auth';
 
 export default function ChangeUserName() {
   const [userId, setUserId] = useState()  // ユーザーID
@@ -41,7 +37,7 @@ export default function ChangeUserName() {
         navigation.navigate('SignIn')
       }
     } catch (error) {
-      console.error("AsyncStorageでエラー：", error)
+      console.log("[error]AsyncStorageエラー:", error)
     }
   }
 
@@ -61,13 +57,13 @@ export default function ChangeUserName() {
           const data = await response.json()
           setUserData(data[0])
         } catch (error) {
-          console.error("JSONのパースに失敗:", error)
+          console.log("[error]JSONエラー:", error)
         }
       } else {
-        console.error("レスポンスエラー:", response.status)
+        console.log("[error]レスポンスエラー:", response.status)
       }
     } catch (error) {
-      console.error("fetch処理でエラー：", error)
+      console.log("[error]fetchエラー:", error)
     }
   }
 
@@ -76,27 +72,18 @@ export default function ChangeUserName() {
     if (changeUserName) {
       setIsNullTextBox(false)
       try {
-        const data = { userId: userId, changeUserName: changeUserName }
-        console.log(data)
-        let url = new URL('http://10.65.10.82:3000/changeUserName')
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data })
-        });
-
-        if (response.ok) {
-          navigation.navigate('AccountDetails')
-        } else {
-          console.error("API処理に失敗しました：", response.status)
-          setIsError(true)
-        }
+        await updateUserAttribute({
+          userAttribute: {
+            name: changeUserName
+          }
+        })
+        console.log("ユーザーネーム更新 成功")
+        setIsError(false)
       } catch (error) {
-        console.error("fetch処理でエラー：", error)
+        console.log("[error]ユーザーネーム更新エラー:", error)
         setIsError(true)
       }
+
     } else {
       setIsNullTextBox(true)
     }
