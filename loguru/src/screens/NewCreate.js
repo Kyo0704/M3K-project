@@ -112,7 +112,7 @@ export default function NewCreate() {
       };
 
       // APIを使ってデータを送信
-      await axios.post('http://10.108.1.231:3000/travel_logs', logData); //一号館
+      await axios.post('http://10.108.1.140:3000/travel_logs', logData); //一号館
       //await axios.post('http://10.200.4.200:3000/travel_logs', logData); //二号館
 
       console.log('データ送信成功:', logData);

@@ -111,7 +111,7 @@ export default function GPSConfirmation() {
         });
 
         for (const point of newGpsData) {
-          await axios.post('http://10.108.1.231:3000/user_locations', {
+          await axios.post('http://10.108.1.140:3000/user_locations', {
             user_id: 'some_user_id', // ユーザーIDを適切に設定
             visited_at: point.timestamp,
             location_id: `loc-${point.day}`,

@@ -38,7 +38,7 @@ const testDataArray = [
 
 testDataArray.forEach(async (testData) => {
   try {
-    const response = await axios.post('http://localhost:3000/travel_logs', testData);
+    const response = await axios.post('http://10.108.1.140/travel_logs', testData);
     console.log('データが挿入されました:', response.data);
   } catch (error) {
     console.error('データの挿入に失敗しました:', error);

@@ -48,7 +48,7 @@ export default function LogeCreate() {
   // ログを削除する関数
   const deleteLog = async (logId) => {
     try {
-      await axios.delete(`http://10.108.1.231:3000/travel_logs/${logId}`); //一号館
+      await axios.delete(`http://10.108.1.140:3000/travel_logs/${logId}`); //一号館
       //await axios.delete(`http://10.200.4.200:3000/travel_logs/${logId}`); //二号館
       Alert.alert("削除成功", "ログが正常に削除されました。");
       fetchTravelLogs(); // 状態を更新してUIをリフレッシュ

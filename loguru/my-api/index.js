@@ -434,5 +434,5 @@ app.post('/dates', async (req, res) => {
 
 // サーバーの起動
 app.listen(port, () => {
-  console.log(`Server running on http://10.108.1.231:${port}`);
+  console.log(`Server running on http://10.108.1.140:${port}`);
 });

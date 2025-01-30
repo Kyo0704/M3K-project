@@ -36,18 +36,25 @@ export default function Photo() {
   const [photos, setPhotos] = useState([]);
 
   useEffect(() => {
-    const loadPhotos = async () => {
+    const initializePhotos = async () => {
       try {
         const storedPhotos = await AsyncStorage.getItem('photos');
-        if (storedPhotos) {
+        if (!storedPhotos) {
+          await AsyncStorage.setItem('photos', JSON.stringify(samplePhotos));
+          setPhotos(samplePhotos);
+        } else {
           setPhotos(JSON.parse(storedPhotos));
         }
       } catch (error) {
-        console.error('Failed to load photos from storage', error);
+        console.error('Failed to initialize photos', error);
       }
     };
-    loadPhotos();
+    initializePhotos();
   }, []);
+
+  const generateUniqueId = () => {
+    return photos.length > 0 ? Math.max(...photos.map(photo => photo.id)) + 1 : 1;
+  };
 
   const filteredPhotos = photos.filter(photo => {
     const query = searchQuery.toLowerCase();
@@ -68,7 +75,8 @@ export default function Photo() {
 
   const savePhoto = async (newPhoto) => {
     try {
-      const updatedPhotos = [...photos, newPhoto];
+      const photoWithId = { ...newPhoto, id: generateUniqueId() };
+      const updatedPhotos = [...photos, photoWithId];
       setPhotos(updatedPhotos);
       await AsyncStorage.setItem('photos', JSON.stringify(updatedPhotos));
     } catch (error) {
@@ -150,8 +158,9 @@ export default function Photo() {
                   <View style={styles.photoInfo}>
                     <Text style={styles.photoDate}>{photo.date}</Text>
                     <View style={styles.tagContainer}>
-                      <TagIcon size={12} color="#fff" />
-                      <Text style={styles.tagCount}>{photo.tags.length}</Text>
+                      {photo.tags.map((tag, index) => (
+                        <Text key={index} style={styles.tagText}>{tag}</Text>
+                      ))}
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -251,9 +260,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', // 垂直方向の中央揃え
     gap: 4, // 要素間の隙間
   },
-  tagCount: {
-    color: '#fff', // 文字色
-    fontSize: 12, // フォントサイズ
+  tagText: {
+    color: '#fff',
+    fontSize: 12,
+    marginRight: 4,
   },
   emptyState: {
     flex: 1, // 高さを最大化

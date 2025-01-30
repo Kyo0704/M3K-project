@@ -42,7 +42,7 @@ export default function RouteMap() {
   useEffect(() => {
     const loadMarkers = async () => {
       try {
-        const response = await axios.get('http://10.108.1.231:3000/user_locations'); //一号館
+        const response = await axios.get('http://10.108.1.140:3000/user_locations'); //一号館
        // const response = await axios.get('http://10.200.4.200:3000/user_locations');
         const gpsData = response.data;
 

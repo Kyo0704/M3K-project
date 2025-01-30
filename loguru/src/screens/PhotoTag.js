@@ -84,9 +84,9 @@ export default function PhotoTag() {
       const parsedPhotos = storedPhotos ? JSON.parse(storedPhotos) : [];
       const updatedPhotos = parsedPhotos.map(photo => {
         if (photo.id === photoId) {
-          return { ...photo, tags };
+          return { ...photo, tags }; // 特定の画像のタグを更新
         }
-        return photo;
+        return photo; // 他の画像はそのまま
       });
       await AsyncStorage.setItem('photos', JSON.stringify(updatedPhotos));
 
