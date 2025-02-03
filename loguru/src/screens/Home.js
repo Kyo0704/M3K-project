@@ -18,7 +18,7 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        await checkLogin()
+        // await checkLogin()
         await getHomeLogData()
       })()
       const subscription = Dimensions.addEventListener('change', ({ window: { width } }) => {
