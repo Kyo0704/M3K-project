@@ -35,6 +35,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # amplify
-# .amplify
-# amplify_outputs*
-# amplifyconfiguration*
+.amplify
+amplify_outputs*
+amplifyconfiguration*
