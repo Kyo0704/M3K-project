@@ -1,12 +1,13 @@
 /**
+ * 現在は未使用のページです。
  * ファイル名：ConfirmSignUp.js
- * 説明；サインアップ時のメールアドレスによるコード認証
+ * 説明：サインアップ時のメールアドレスによるコード認証
  */
 
 import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { useRoute } from "@react-navigation/native"
-import { confirmSignUp, resendSignUpCode, getCurrentUser } from "aws-amplify/auth";
+import { confirmSignUp, resendSignUpCode, getCurrentUser, autoSignIn } from "aws-amplify/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
@@ -21,11 +22,20 @@ export default function ConfirmSignUp() {
     console.log(email)
     console.log(authCode)
     try {
-      await confirmSignUp({
+      const { nextStep: confirmSignUpNextStep } = await confirmSignUp({
         username: email,
         confirmationCode: authCode,
       });
       console.log("認証コード　成功")
+
+      // コード認証が成功し、autoSignInを実行
+      if (confirmSignUpNextStep.signUpStep === 'COMPLETE_AUTO_SIGN_IN') {
+        const { nextStep } = await autoSignIn();
+        if (nextStep.signInStep === 'DONE') {
+          console.log('Successfully signed in.');
+        }
+      }
+
       try {
         const { username, userId, signInDetails } = await getCurrentUser();
         await AsyncStorage.setItem("userId", username)

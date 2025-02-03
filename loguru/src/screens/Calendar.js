@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { View, Button, Text, StyleSheet } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
+// CalendarScreenコンポーネントの定義
 export default function CalendarScreen({ navigation, route }) {
   const [selectedStartDate, setSelectedStartDate] = useState(null);
   const [selectedEndDate, setSelectedEndDate] = useState(null);
 
+  // 日付が選択されたときの処理
   const onDayPress = (day) => {
     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
       setSelectedStartDate(day.dateString);
@@ -15,17 +17,19 @@ export default function CalendarScreen({ navigation, route }) {
     }
   };
 
+  // 選択された日数を計算する関数
   const calculateDays = () => {
     if (selectedStartDate && selectedEndDate) {
       const start = new Date(selectedStartDate);
       const end = new Date(selectedEndDate);
       const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // 日数を計算
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       return diffDays;
     }
     return 0;
   };
 
+  // 確定ボタンが押されたときの処理
   const handleConfirm = () => {
     const totalDays = calculateDays();
     if (route.params.setDays) route.params.setDays(totalDays.toString());
@@ -35,7 +39,7 @@ export default function CalendarScreen({ navigation, route }) {
     if (route.params.setEndDate) route.params.setEndDate(selectedEndDate);
     navigation.goBack();
   };
-  
+
   return (
     <View style={styles.container}>
       <Calendar
@@ -56,6 +60,7 @@ export default function CalendarScreen({ navigation, route }) {
   );
 }
 
+// スタイル定義
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -69,6 +74,7 @@ const styles = StyleSheet.create({
   },
 });
 
+// カレンダーのロケール設定
 LocaleConfig.locales['ja'] = {
   monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
   monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],

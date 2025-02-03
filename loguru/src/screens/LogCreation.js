@@ -80,17 +80,15 @@ const DraggableElement = ({
         const angle = Math.atan2(dy, dx); // ドラッグの角度を計算
         rotation.setValue(angle); // 角度に応じて回転
       } else {
-        // ドラッグの閾値を超えたらドラッグ中と判定
         if (
           Math.abs(gestureState.dx) > dragThreshold ||
           Math.abs(gestureState.dy) > dragThreshold
         ) {
           setIsDragging(true);
         }
-        // ドラッグ中の位置を更新
-        Animated.event([null, { dx: pan.x, dy: pan.y }], {
+        Animated.event([{ dx: pan.x, dy: pan.y }], {
           useNativeDriver: false,
-        })(evt, gestureState);
+        })(gestureState);
       }
     },
     onPanResponderRelease: () => {
@@ -214,7 +212,7 @@ const TextFormatToolbar = ({ onFormatChange, currentFormat, onDelete }) => (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={styles.toolbar}
+      contentContainerStyle={styles.toolbar}
     >
       <View style={styles.toolbarGroup}>
         <TouchableOpacity
@@ -354,7 +352,8 @@ const TextInputModal = ({
 }) => {
   const [text, setText] = useState(initialText); // テキストの状態
   const [format, setFormat] = useState(initialFormat); // フォーマットの状態
-  const [previewText, setPreviewText] = useState(""); // プレビュー用のテキスト
+  const [previewText, setPreviewText] = useState(initialText); // プレビュー用のテキスト
+  const [selectedText, setSelectedText] = useState(""); // 選択中のテキスト
   const [otherUsers, setOtherUsers] = useState([]); // 他のユーザーの状態
   const [socket, setSocket] = useState(null); // WebSocketの状態
 
@@ -409,10 +408,11 @@ const TextInputModal = ({
     debouncedEmitChanges(text, format);
   }, [text, format, debouncedEmitChanges]);
 
-  // フォーマットの変更を処理
-  const handleFormatChange = (key, value) => {
-    setFormat((prev) => ({ ...prev, [key]: value }));
-  };
+  useEffect(() => {
+    // initialTextが変更されたときにtextとpreviewTextを更新
+    setText(initialText);
+    setPreviewText(initialText);
+  }, [initialText]);
 
   useEffect(() => {
     // リアルタイムプレビューの更新
@@ -421,6 +421,23 @@ const TextInputModal = ({
     }, 100);
     return () => clearTimeout(timer);
   }, [text]);
+
+  // フォーマットの変更を処理
+  const handleFormatChange = (key, value) => {
+    setFormat((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // テキスト選択時の処理
+  const handleTextSelection = (event) => {
+    const { selection } = event.nativeEvent;
+    const selected = text.substring(selection.start, selection.end);
+    setSelectedText(selected);
+
+    // 選択が解除された場合、プレビューをクリア
+    if (selection.start === selection.end) {
+      setSelectedText("");
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -441,7 +458,7 @@ const TextInputModal = ({
 
           <View style={styles.previewContainer}>
             <Text style={[styles.previewText, format]}>
-              {previewText || "プレビュー"}
+              {selectedText || text || "プレビュー"}
             </Text>
           </View>
 
@@ -449,6 +466,7 @@ const TextInputModal = ({
             style={[styles.modalInput, format]}
             value={text}
             onChangeText={setText}
+            onSelectionChange={handleTextSelection} // テキスト選択時のイベントハンドラを追加
             multiline
             autoFocus
             placeholder="テキストを入力..."
@@ -467,7 +485,7 @@ const TextInputModal = ({
               onPress={() => onSave(text, format)}
               style={[styles.modalButton, styles.saveButton]}
             >
-              <Text style={styles.saveButtonText}>保存</Text>
+              <Text style={styles.saveButtonText}>決定</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -488,14 +506,40 @@ const OtherUsersPreview = ({ users }) => (
   </View>
 );
 
-const saveElement = async () => {
+// 要素を個別に保存
+const saveElement = async (element) => {
   try {
-    const jsonValue = JSON.stringify(elements); // 要素をJSON形式に変換
-    await AsyncStorage.setItem("@elements", jsonValue); //ローカルストレージに保存
-    Alert.alert("保存完了", "ログが保存されました"); // 保存完了メッセージを表示
+    const jsonValue = JSON.stringify(element); // 要素をJSON形式に変換
+    await AsyncStorage.setItem(`@element_${element.id}`, jsonValue); // ローカルストレージに保存
+    Alert.alert("保存完了", `${element.type}が保存されました`); // 保存完了メッセージを表示
   } catch (e) {
     console.error(e); // エラーをログに出力
-    Alert.alert("保存失敗", "ログの保存に失敗しました"); // 保存失敗メッセージを表示
+    Alert.alert("保存失敗", `${element.type}の保存に失敗しました`); // 保存失敗メッセージを表示
+  }
+};
+
+
+
+// ピンの状態を保存する関数
+const savePinState = async (pinId, elements) => {
+  try {
+    const jsonValue = JSON.stringify(elements);
+    await AsyncStorage.setItem(`@pin_${pinId}_elements`, jsonValue);
+    Alert.alert("保存完了", "ピンの状態が保存されました");
+  } catch (e) {
+    console.error(e);
+    Alert.alert("保存失敗", "ピンの状態の保存に失敗しました");
+  }
+};
+
+// ピンの状態を読み込む関数
+const loadPinState = async (pinId) => {
+  try {
+    const jsonValue = await AsyncStorage.getItem(`@pin_${pinId}_elements`);
+    return jsonValue != null ? JSON.parse(jsonValue) : [];
+  } catch (e) {
+    console.error(e);
+    return [];
   }
 };
 
@@ -533,27 +577,34 @@ export default function LogCreation({ marker, onClose }) {
   };
 
   useEffect(() => {
-    if (marker) {
-      // マーカーの情報を要素として追加
-      setElements([
-        {
-          id: "1",
-          type: "text",
-          content: marker.title,
-          x: 50,
-          y: 50,
-          format: { ...defaultTextFormat },
-        },
-        {
-          id: "2",
-          type: "text",
-          content: marker.description,
-          x: 50,
-          y: 100,
-          format: { ...defaultTextFormat },
-        },
-      ]);
-    }
+    const loadElements = async () => {
+      if (marker) {
+        const savedElements = await loadPinState(marker.id);
+        if (savedElements.length > 0) {
+          setElements(savedElements);
+        } else {
+          setElements([
+            {
+              id: "1",
+              type: "text",
+              content: marker.title,
+              x: 50,
+              y: 50,
+              format: { ...defaultTextFormat },
+            },
+            {
+              id: "2",
+              type: "text",
+              content: marker.description,
+              x: 50,
+              y: 100,
+              format: { ...defaultTextFormat },
+            },
+          ]);
+        }
+      }
+    };
+    loadElements();
   }, [marker]);
 
   useEffect(() => {
@@ -607,14 +658,15 @@ export default function LogCreation({ marker, onClose }) {
         console.log("レイアウト追加");
         break;
       case "save":
-        saveElement();
+        elements.forEach(saveElement);
+        savePinState(marker.id, elements); // ピンの状態を保存
         console.log("保存");
-        onClose(); // 画面を閉じる
+        onClose();
         break;
       default:
         console.log("未対応のオプションが選択されました");
     }
-    setFabOpen(false); // FABを閉じる
+    setFabOpen(false);
   };
 
   // 新しい要素を追加
@@ -734,7 +786,9 @@ export default function LogCreation({ marker, onClose }) {
           <Save size={24} color="#333" />
         </TouchableOpacity>
       </View>
-      <View style={styles.content}>{elements.map(renderElement)}</View>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <View style={styles.content}>{elements.map(renderElement)}</View>
+      </ScrollView>
       <TouchableOpacity
         style={styles.fab}
         onPress={toggleFab}

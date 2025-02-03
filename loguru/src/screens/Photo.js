@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,22 +7,23 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Alert,
 } from 'react-native';
 import { Search, Tag as TagIcon } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// サンプルデータ（実際のアプリではAPIから取得）
 const samplePhotos = [
   {
     id: 1,
-    uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/placeholder-QwHC39KUumvD8TJDqsv5GXTzPWBnB5.jpg',
+    uri: require('../Photo/2.png'),
     date: '2024/01/15',
     location: '京都',
     tags: ['京都', '神社', '伏見稲荷'],
   },
   {
     id: 2,
-    uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/placeholder-QwHC39KUumvD8TJDqsv5GXTzPWBnB5.jpg',
+    uri: require('../Photo/nara-tourist-spot_thumb.png'),
     date: '2024/01/16',
     location: '奈良',
     tags: ['奈良', '寺院'],
@@ -32,14 +33,34 @@ const samplePhotos = [
 export default function Photo() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [photos, setPhotos] = useState(samplePhotos);
+  const [photos, setPhotos] = useState([]);
+
+  useEffect(() => {
+    const initializePhotos = async () => {
+      try {
+        const storedPhotos = await AsyncStorage.getItem('photos');
+        if (!storedPhotos) {
+          await AsyncStorage.setItem('photos', JSON.stringify(samplePhotos));
+          setPhotos(samplePhotos);
+        } else {
+          setPhotos(JSON.parse(storedPhotos));
+        }
+      } catch (error) {
+        console.error('Failed to initialize photos', error);
+      }
+    };
+    initializePhotos();
+  }, []);
+
+  const generateUniqueId = () => {
+    return photos.length > 0 ? Math.max(...photos.map(photo => photo.id)) + 1 : 1;
+  };
 
   const filteredPhotos = photos.filter(photo => {
     const query = searchQuery.toLowerCase();
-    return (
-      photo.location.toLowerCase().includes(query) ||
-      photo.tags.some(tag => tag.toLowerCase().includes(query))
-    );
+    const location = photo.location ? photo.location.toLowerCase() : '';
+    const tags = photo.tags ? photo.tags.map(tag => tag.toLowerCase()) : [];
+    return location.includes(query) || tags.some(tag => tag.includes(query));
   });
 
   const handlePhotoPress = (photo) => {
@@ -50,6 +71,41 @@ export default function Photo() {
       photoId: photo.id,
       isEditing: true,
     });
+  };
+
+  const savePhoto = async (newPhoto) => {
+    try {
+      const photoWithId = { ...newPhoto, id: generateUniqueId() };
+      const updatedPhotos = [...photos, photoWithId];
+      setPhotos(updatedPhotos);
+      await AsyncStorage.setItem('photos', JSON.stringify(updatedPhotos));
+    } catch (error) {
+      console.error('Failed to save photo to storage', error);
+    }
+  };
+
+  const removePhoto = async (photoId) => {
+    try {
+      const storedPhotos = await AsyncStorage.getItem('photos');
+      const parsedPhotos = storedPhotos ? JSON.parse(storedPhotos) : [];
+      const updatedPhotos = parsedPhotos.filter(photo => photo.id !== photoId);
+      setPhotos(updatedPhotos);
+      await AsyncStorage.setItem('photos', JSON.stringify(updatedPhotos));
+    } catch (error) {
+      console.error('Failed to remove photo from storage', error);
+    }
+  };
+
+  const confirmDeletePhoto = (photoId) => {
+    Alert.alert(
+      "確認",
+      "この画像を削除してもよろしいですか？",
+      [
+        { text: "キャンセル", style: "cancel" },
+        { text: "削除", onPress: () => removePhoto(photoId), style: "destructive" },
+      ],
+      { cancelable: true }
+    );
   };
 
   const renderEmptyState = () => (
@@ -88,26 +144,33 @@ export default function Photo() {
         ) : (
           <View style={styles.photoGrid}>
             {filteredPhotos.map((photo) => (
-              <TouchableOpacity
-                key={photo.id}
-                style={styles.photoContainer}
-                onPress={() => handlePhotoPress(photo)}
-              >
-                <Image 
-                  source={{ uri: photo.uri }} 
-                  style={styles.photo}
-                  onError={(error) => {
-                    console.error('Image loading error:', error.nativeEvent.error);
-                  }}
-                />
-                <View style={styles.photoInfo}>
-                  <Text style={styles.photoDate}>{photo.date}</Text>
-                  <View style={styles.tagContainer}>
-                    <TagIcon size={12} color="#fff" />
-                    <Text style={styles.tagCount}>{photo.tags.length}</Text>
+              <View key={photo.id} style={styles.photoContainer}>
+                <TouchableOpacity
+                  onPress={() => handlePhotoPress(photo)}
+                >
+                  <Image 
+                    source={{ uri: photo.uri }}
+                    style={styles.photo}
+                    onError={(error) => {
+                      console.error("Image loading error:", error.nativeEvent.error);
+                    }}
+                  />
+                  <View style={styles.photoInfo}>
+                    <Text style={styles.photoDate}>{photo.date}</Text>
+                    <View style={styles.tagContainer}>
+                      {photo.tags.map((tag, index) => (
+                        <Text key={index} style={styles.tagText}>{tag}</Text>
+                      ))}
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => confirmDeletePhoto(photo.id)}
+                >
+                  <Text style={styles.deleteButtonText}>削除</Text>
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         )}
@@ -116,105 +179,119 @@ export default function Photo() {
   );
 }
 
+// スタイル定義
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f0f0f0', // 背景色
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    backgroundColor: '#fff',
+    padding: 16, // パディング
+    borderBottomWidth: 1, // 下線
+    borderBottomColor: '#ddd', // 下線の色
+    backgroundColor: '#fff', // 背景色
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    marginTop: 20,
+    flexDirection: 'row', // 横並び
+    alignItems: 'center', // 垂直方向の中央揃え
+    backgroundColor: '#e0e0e0', // 背景色
+    borderRadius: 8, // 角丸
+    paddingHorizontal: 12, // 横パディング
+    marginBottom: 12, // 下マージン
+    marginTop: 20, // 上マージン
   },
   searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    fontSize: 16,
-    color: '#333',
+    flex: 1, // 入力フィールドの幅を最大化
+    paddingVertical: 8, // 縦パディング
+    paddingHorizontal: 8, // 横パディング
+    fontSize: 16, // フォントサイズ
+    color: '#333', // 文字色
   },
   uploadButton: {
-    backgroundColor: '#C1A14E',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
+    backgroundColor: '#C1A14E', // ボタンの背景色
+    padding: 12, // パディング
+    borderRadius: 8, // 角丸
+    alignItems: 'center', // 水平方向の中央揃え
+    marginTop: 8, // 上マージン
   },
   uploadButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
+    color: '#fff', // 文字色
+    fontSize: 16, // フォントサイズ
+    fontWeight: '500', // フォントの太さ
   },
   content: {
-    flex: 1,
+    flex: 1, // コンテンツの高さを最大化
   },
   photoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 8,
+    flexDirection: 'row', // 横並び
+    flexWrap: 'wrap', // 折り返し
+    padding: 8, // パディング
   },
   photoContainer: {
-    width: '48%',
-    aspectRatio: 1,
-    margin: '1%',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#e0e0e0',
+    width: '48%', // 幅
+    aspectRatio: 1, // アスペクト比
+    margin: '1%', // マージン
+    borderRadius: 8, // 角丸
+    overflow: 'hidden', // はみ出しを隠す
+    backgroundColor: '#e0e0e0', // 背景色
   },
   photo: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+    width: '100%', // 幅
+    height: '100%', // 高さ
+    resizeMode: 'cover', // 画像のリサイズモード
   },
   photoInfo: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    position: 'absolute', // 絶対位置
+    bottom: 0, // 下位置
+    left: 0, // 左位置
+    right: 0, // 右位置
+    padding: 8, // パディング
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // 背景色
+    flexDirection: 'row', // 横並び
+    justifyContent: 'space-between', // 両端揃え
+    alignItems: 'center', // 垂直方向の中央揃え
   },
   photoDate: {
-    color: '#fff',
-    fontSize: 12,
+    color: '#fff', // 文字色
+    fontSize: 12, // フォントサイズ
   },
   tagContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    flexDirection: 'row', // 横並び
+    alignItems: 'center', // 垂直方向の中央揃え
+    gap: 4, // 要素間の隙間
   },
-  tagCount: {
+  tagText: {
     color: '#fff',
     fontSize: 12,
+    marginRight: 4,
   },
   emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
+    flex: 1, // 高さを最大化
+    justifyContent: 'center', // 水平方向の中央揃え
+    alignItems: 'center', // 垂直方向の中央揃え
+    padding: 32, // パディング
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 18, // フォントサイズ
+    fontWeight: 'bold', // 太字
+    color: '#666', // 文字色
+    marginBottom: 8, // 下マージン
   },
   emptyStateSubText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
+    fontSize: 14, // フォントサイズ
+    color: '#999', // 文字色
+    textAlign: 'center', // 中央揃え
+  },
+  deleteButton: {
+    backgroundColor: '#ff4444', // 削除ボタンの背景色
+    padding: 8, // パディング
+    borderRadius: 8, // 角丸
+    alignItems: 'center', // 水平方向の中央揃え
+    marginTop: 8, // 上マージン
+  },
+  deleteButtonText: {
+    color: '#fff', // 文字色
+    fontSize: 14, // フォントサイズ
+    fontWeight: '500', // フォントの太さ
   },
 });

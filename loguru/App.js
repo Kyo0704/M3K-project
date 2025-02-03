@@ -27,35 +27,12 @@ import ChangeEmail from './src/screens/Account/ChangeEmail'
 import CreateNewPassword from './src/screens/Account/CreateNewPassword';
 import LikeList from './src/screens/Account/LikeList'
 import ConfirmSignUp from './src/screens/Auth/ConfirmSignUp'
+import RouteMapView from "./src/screens/RouteMapView";
 
 import { Amplify } from "aws-amplify";
+import outputs from "@/amplify_outputs.json";
 
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: "us-east-1_Epk4lePw5",
-      userPoolClientId: "2f6b0r0u1rm3t4stb6ksaomjo5",
-      // identityPoolId: "<your-cognito-identity-pool-id>",
-      loginWith: {
-        email: true,
-      },
-      signUpVerificationMethod: "code",
-      userAttributes: {
-        email: {
-          required: true,
-        },
-      },
-      allowGuestAccess: true,
-      passwordFormat: {
-        minLength: 8,
-        requireLowercase: true,
-        requireUppercase: true,
-        requireNumbers: true,
-        requireSpecialCharacters: true,
-      },
-    },
-  },
-})
+Amplify.configure(outputs)
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -286,7 +263,13 @@ export default function App() {
           component={SignUp}
           options={{ title: 'サインアップ', headerShown: false }}
         />
+        {/* RouteMapViewをスタックに追加 */}
         <Stack.Screen
+          name="RouteMapView"
+          component={RouteMapView}
+          options={{ title: 'ルートマップ', headerShown: true }}
+        />
+                <Stack.Screen
           name="ConfirmSignUp"
           component={ConfirmSignUp}
           options={{ title: 'サンアップ確認', headerShown: false }}

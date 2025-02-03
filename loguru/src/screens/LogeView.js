@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,87 +9,103 @@ import {
   TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import axios from 'axios';
+import { format } from 'date-fns';
+import { useNavigation } from '@react-navigation/native';
 
-// ダミーデータの定義（通常はAPIから取得）
-const dummyLogs = [
-  {
-    id: '1',
-    title: '京都旅行',
-    date: '10/10～10/13',
-    members: ['鈴木', '斎藤', '木下'],
-    thumbnail: 'https://via.placeholder.com/150',
-    author: 'SUZUKI TAROU',
-    authorAvatar: 'https://via.placeholder.com/40',
-  },
-  {
-    id: '2',
-    title: '宮城県旅行',
-    date: '12/13～12/16',
-    members: ['山田', '鈴木'],
-    thumbnail: 'https://via.placeholder.com/150',
-    author: 'YAMADA HANAKO',
-    authorAvatar: 'https://via.placeholder.com/40',
-  },
-];
+// ダミーデータの削除
+// const dummyLogs = [
+//   {
+//     id: '1',
+//     title: '京都旅行',
+//     date: '10/10～10/13',
+//     members: ['鈴木', '斎藤', '木下'],
+//     thumbnail: 'https://via.placeholder.com/150',
+//     author: 'SUZUKI TAROU',
+//     authorAvatar: 'https://via.placeholder.com/40',
+//   },
+//   {
+//     id: '2',
+//     title: '宮城県旅行',
+//     date: '12/13～12/16',
+//     members: ['山田', '鈴木'],
+//     thumbnail: 'https://via.placeholder.com/150',
+//     author: 'YAMADA HANAKO',
+//     authorAvatar: 'https://via.placeholder.com/40',
+//   },
+// ];
 
 export default function LogeView() {
-  // 現在アクティブなタブを管理するステート
   const [activeTab, setActiveTab] = useState('新規順');
-  // 検索クエリを管理するステート
   const [searchQuery, setSearchQuery] = useState('');
+  const [logs, setLogs] = useState([]);
+  const navigation = useNavigation();
 
-  // 検索クエリに基づいてログをフィルタリング
-  const filteredLogs = dummyLogs.filter(log =>
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+    const response = await axios.get('http://10.108.1.172:3000/travel_logs'); //一号館
+     // const response = await axios.get('http://10.200.4.200:3000/travel_logs'); //二号館
+        setLogs(response.data);
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      }
+    };
+
+    fetchLogs();
+  }, []);
+
+  const filteredLogs = logs.filter(log =>
     log.title.includes(searchQuery)
   );
 
-  // タブに基づいてログをソート
   const sortedLogs = filteredLogs.sort((a, b) => {
     if (activeTab === '日付順') {
-      // 日付順にソート
-      return new Date(a.date.split('～')[0]) - new Date(b.date.split('～')[0]);
+      const dateA = a.date ? new Date(a.date.split('～')[0]) : new Date();
+      const dateB = b.date ? new Date(b.date.split('～')[0]) : new Date();
+      return dateA - dateB;
     } else if (activeTab === '新規順') {
-      // IDを基に新規順にソート
       return b.id - a.id;
     } else if (activeTab === '人気順') {
-      // 人気順のソートロジック（仮）
-      return a.title.localeCompare(b.title);
+      return b.like_num - a.like_num;
     }
     return 0;
   });
 
-  // 各ログアイテムをレンダリングする関数
+  const handleLogPress = (log) => {
+    navigation.navigate('RouteMapView', { logId: log.id });
+  };
+
   const renderLogItem = ({ item }) => (
-    <View style={styles.card}>
-      {/* サムネイル画像 */}
-      <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
-      <View style={styles.cardContent}>
-        {/* タイトル、日付、メンバー情報の表示 */}
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.date}>{item.date}</Text>
-        <Text style={styles.members}>メンバー：{item.members.join('、')}</Text>
-        <View style={styles.authorRow}>
-          {/* 作者のアバターと名前 */}
-          <Image source={{ uri: item.authorAvatar }} style={styles.avatar} />
-          <Text style={styles.author}>{item.author}</Text>
-          {/* アクションボタン（お気に入り、共有、その他） */}
-          <TouchableOpacity style={styles.iconButton}>
-            <MaterialIcons name="favorite-border" size={24} color="#666" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <MaterialIcons name="share" size={24} color="#666" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <MaterialIcons name="more-vert" size={24} color="#666" />
-          </TouchableOpacity>
+    <TouchableOpacity onPress={() => handleLogPress(item)}>
+      <View style={styles.card}>
+        <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+        <View style={styles.cardContent}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.date}>
+            {format(new Date(item.start_date), 'yyyy年MM月dd日')} - {format(new Date(item.end_date), 'yyyy年MM月dd日')}
+          </Text>
+          <Text style={styles.likes}>いいね数: {item.like_num}</Text>
+          <View style={styles.authorRow}>
+            <Image source={{ uri: item.authorAvatar }} style={styles.avatar} />
+            <Text style={styles.author}>{item.author}</Text>
+            <TouchableOpacity style={styles.iconButton}>
+              <MaterialIcons name="favorite-border" size={24} color="#666" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton}>
+              <MaterialIcons name="share" size={24} color="#666" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton}>
+              <MaterialIcons name="more-vert" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      {/* 検索バー */}
       <View style={styles.searchBar}>
         <MaterialIcons name="search" size={24} color="#666" />
         <TextInput
@@ -100,7 +116,6 @@ export default function LogeView() {
         />
       </View>
       
-      {/* タブナビゲーション */}
       <View style={styles.tabs}>
         {['日付順', '新規順', '人気順'].map(tab => (
           <TouchableOpacity
@@ -115,7 +130,6 @@ export default function LogeView() {
         ))}
       </View>
 
-      {/* ログのリスト表示 */}
       <FlatList
         data={sortedLogs}
         renderItem={renderLogItem}
@@ -170,8 +184,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 8,
     overflow: 'hidden',
-    elevation: 1, // Android用の影
-    shadowColor: '#000', // iOS用の影
+    elevation: 1,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -189,6 +203,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   date: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  likes: {
     fontSize: 14,
     color: '#666',
     marginBottom: 4,

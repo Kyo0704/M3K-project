@@ -9,6 +9,7 @@ import { useNavigation } from "@react-navigation/native";
 import '@/global.css'
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signIn } from "aws-amplify/auth"
+import { getCurrentUser } from "aws-amplify/auth";
 
 
 export default function SignIn() {
@@ -27,9 +28,8 @@ export default function SignIn() {
     }
   })
 
-  // サインインが押された時の処理
+  // サインインが押された時に発火
   const onPressSignIn = async () => {
-    // すべての項目に対して入力されているかのチェック
     if (email == '' || password == '') {
       setErrorAllItemsFlag(true)
     } else {
@@ -41,15 +41,27 @@ export default function SignIn() {
   // サインイン情報送信
   const sendSignIn = async () => {
     try {
-      const { nextStep } = await signIn({
+      // const { nextStep } = await signIn({
+      //   username: email,
+      //   password: password,
+      // })
+      const { nextStep: signInNextStep } = await signIn({
         username: email,
         password: password,
-      })
+        options: {
+          authFlowType: 'USER_AUTH',
+          preferredChallenge: 'PASSWORD', // or 'PASSWORD'
+        },
+      });
+
       console.log("サインイン処理が完了")
+      console.log(signInNextStep.signInStep)
       setErrorProcessFlag(false)
       onLoginSuccess()
     } catch (error) {
-      console.log("[error]サインインエラー:", error)
+      console.log("[error]サインインエラー:", error); // 現在のエラー表示
+      console.log("[error]サインインエラー(詳細):", error.message); // エラーメッセージを表示
+      console.log("[error]サインインエラー(コード):", error.code); // エラーコードを表示
       setErrorProcessFlag(true)
     }
   }
@@ -68,7 +80,6 @@ export default function SignIn() {
   // サインアップページへの遷移処理
   const gotoSignUp = () => {
     navigation.navigate('SignUp')
-    // navigation.navigate('ConfirmSignUp')
   }
 
   // サインアップフォームエラー表示

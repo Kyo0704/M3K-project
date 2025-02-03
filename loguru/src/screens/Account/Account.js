@@ -10,6 +10,7 @@ import { View, Text, Pressable, ImageBackground, Image, StyleSheet } from 'react
 import { ScrollView } from 'react-native-gesture-handler';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // 使用するアイコンセットを指定
 import { signOut } from 'aws-amplify/auth';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 export default function Home() {
   const [userData, setUserData] = useState()
@@ -77,6 +78,18 @@ export default function Home() {
     }
   }
 
+  const getData = async() => {
+    try{
+      const { username, userId, signInDetails } = await getCurrentUser();
+
+      console.log("username", username);
+      console.log("user id", userId);
+      console.log("sign-in details", signInDetails);
+    }catch(error){
+      console.log("[error]：", error)
+    }
+  }
+
   const onPressAccountData = () => {
     navigation.navigate('AccountDetails')
   }
@@ -90,6 +103,11 @@ export default function Home() {
       <View>
         <Pressable onPress={signout}>
           <Text>ログアウトする</Text>
+        </Pressable>
+      </View>
+      <View>
+        <Pressable onPress={getData}>
+          <Text>データ取得</Text>
         </Pressable>
       </View>
       {/* ヘッダ */}

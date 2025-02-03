@@ -13,77 +13,73 @@ import { Camera, X, Upload, Tag as TagIcon } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { validateImageUri } from "../utils/imageHelpers";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// PhotoUploadコンポーネントの定義
 export default function PhotoUpload() {
-  const navigation = useNavigation(); // ナビゲーションフックを使用して画面遷移を管理
-  const [selectedImages, setSelectedImages] = useState([]); // 選択された画像の状態を管理
-  const [location, setLocation] = useState(""); // ユーザーが入力した場所を管理
+  const navigation = useNavigation();
+  const [selectedImages, setSelectedImages] = useState([]);
 
-  // 画像を選択するための関数
   const pickImage = async () => {
-    // メディアライブラリへのアクセス許可を要求
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    // 許可が得られなかった場合、アラートを表示
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert("権限エラー", "カメラロールへのアクセス許可が必要です。");
       return;
     }
 
-    // 画像ライブラリを開いて画像を選択
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // 画像のみを選択可能
-      allowsMultipleSelection: true, // 複数選択を許可
-      quality: 1, // 画像の品質を最大に設定
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 1,
     });
 
-    // 選択がキャンセルされていない場合、選択された画像を状態に追加
     if (!result.canceled) {
       const newImages = result.assets.map((asset) => ({
-        uri: asset.uri.toString(), // 画像のURIを文字列として保存
-        tags: [], // 各画像に関連付けるタグの配列
+        uri: asset.uri.toString(),
+        tags: [],
       }));
-      setSelectedImages((prev) => [...prev, ...newImages]); // 既存の画像に新しい画像を追加
+      setSelectedImages((prev) => [...prev, ...newImages]);
     }
   };
 
-  // 画像を削除するための関数
   const removeImage = (index) => {
-    setSelectedImages((prev) => prev.filter((_, i) => i !== index)); // 指定されたインデックスの画像を削除
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // 画像をアップロードするための関数
-  const handleUpload = () => {
-    // 場所が入力されていない場合、アラートを表示
-    if (!location.trim()) {
-      Alert.alert("エラー", "場所を入力してください。");
-      return;
+  const saveImagesToStorage = async (images) => {
+    try {
+      const storedImages = await AsyncStorage.getItem('photos');
+      const parsedImages = storedImages ? JSON.parse(storedImages) : [];
+      const updatedImages = [...parsedImages, ...images];
+      await AsyncStorage.setItem('photos', JSON.stringify(updatedImages));
+    } catch (error) {
+      console.error('Failed to save images to storage', error);
     }
-    // 画像が選択されていない場合、アラートを表示
+  };
+
+  const handleUpload = () => {
     if (selectedImages.length === 0) {
       Alert.alert("エラー", "画像を選択してください。");
       return;
     }
 
-    // アップロード完了後のアラートを表示し、タグを追加するかどうかを確認
+    saveImagesToStorage(selectedImages);
+
     Alert.alert("完了", "アップロードが完了しました。タグを追加しますか？", [
       {
-        text: "あとで", // タグを追加しない場合
-        onPress: () => navigation.goBack(), // 前の画面に戻る
+        text: "あとで",
+        onPress: () => navigation.goBack(),
         style: "cancel",
       },
       {
-        text: "タグを追加", // タグを追加する場合
+        text: "タグを追加",
         onPress: () => {
           navigation.navigate("PhotoTag", {
-            imageUri: selectedImages[0].uri, // 最初の画像のURIを渡す
-            date: new Date().toISOString(), // 現在の日付を渡す
+            imageUri: selectedImages[0].uri,
+            date: new Date().toISOString(),
             remainingPhotos: selectedImages.slice(1).map((img) => ({
               uri: img.uri,
               date: new Date().toISOString(),
-            })), // 残りの画像を渡す
+            })),
           });
         },
       },
@@ -92,66 +88,48 @@ export default function PhotoUpload() {
 
   return (
     <View style={styles.container}>
-      {/* ヘッダー部分 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <X size={24} color="#333" /> {/* 戻るボタン */}
+          <X size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>写真のアップロード</Text> {/* 画面タイトル */}
+        <Text style={styles.headerTitle}>写真のアップロード</Text>
         <TouchableOpacity
           style={[
             styles.uploadButton,
-            (!location.trim() || selectedImages.length === 0) &&
-              styles.uploadButtonDisabled, // 場所が入力されていないか画像が選択されていない場合、ボタンを無効化
+            selectedImages.length === 0 && styles.uploadButtonDisabled,
           ]}
           onPress={handleUpload}
-          disabled={!location.trim() || selectedImages.length === 0} // ボタンの無効化条件
+          disabled={selectedImages.length === 0}
         >
-          <Upload size={20} color="#fff" /> {/* アップロードボタン */}
+          <Upload size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* 場所入力部分 */}
-      <View style={styles.locationContainer}>
-        <Text style={styles.label}>場所</Text>
-        <TextInput
-          style={styles.locationInput}
-          value={location}
-          onChangeText={setLocation} // 入力されたテキストを状態に保存
-          placeholder="場所を入力してください"
-          placeholderTextColor="#999"
-        />
-      </View>
-
-      {/* 画像選択部分 */}
       <ScrollView style={styles.content}>
         <View style={styles.imageGrid}>
           <TouchableOpacity style={styles.addButton} onPress={pickImage}>
-            <Camera size={32} color="#666" /> {/* 画像追加ボタン */}
+            <Camera size={32} color="#666" />
             <Text style={styles.addButtonText}>写真を追加</Text>
           </TouchableOpacity>
 
           {selectedImages.map((image, index) => (
             <View key={index} style={styles.imageContainer}>
               <Image
-                source={{ uri: validateImageUri(image.uri) }} // 画像のURIを検証して表示
+                source={{ uri: validateImageUri(image.uri) }}
                 style={styles.image}
                 onError={(error) => {
-                  console.error(
-                    "Image loading error:",
-                    error.nativeEvent.error // 画像読み込みエラーのログ
-                  );
+                  console.error("Image loading error:", error.nativeEvent.error);
                 }}
               />
               <TouchableOpacity
                 style={styles.removeButton}
-                onPress={() => removeImage(index)} // 画像削除ボタン
+                onPress={() => removeImage(index)}
               >
                 <X size={16} color="#fff" />
               </TouchableOpacity>
               {image.tags.length > 0 && (
                 <View style={styles.tagIndicator}>
-                  <TagIcon size={12} color="#fff" /> {/* タグがある場合の表示 */}
+                  <TagIcon size={12} color="#fff" />
                   <Text style={styles.tagCount}>{image.tags.length}</Text>
                 </View>
               )}
@@ -163,7 +141,6 @@ export default function PhotoUpload() {
   );
 }
 
-// スタイル定義
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -189,24 +166,6 @@ const styles = StyleSheet.create({
   },
   uploadButtonDisabled: {
     backgroundColor: "#ccc",
-  },
-  locationContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
-    marginBottom: 8,
-  },
-  locationInput: {
-    fontSize: 16,
-    padding: 12,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    color: "#333",
   },
   content: {
     flex: 1,
@@ -259,7 +218,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
   },
   tagCount: {
     color: "#fff",

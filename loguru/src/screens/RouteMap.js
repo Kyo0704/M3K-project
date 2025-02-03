@@ -10,14 +10,17 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { Navigation, MapPin, Trash2, Plus } from "lucide-react-native";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import mapStyle from "./raw/map_style.json";
 import LogCreation from "./LogCreation";
 import styles from "./CSS/RouteMapStyle";
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import axios from 'axios';
 
 export default function RouteMap() {
-  const route = useRoute(); // ルート情報を取得
+  const route = useRoute(); // 現在のルート情報を取得
   const mapRef = useRef(null); // MapViewの参照を保持
+  const navigation = useNavigation(); // ナビゲーションフックを使用
 
   const { gpsData, initialRegion: passedRegion } = route.params; // ルートから渡されたパラメータを取得
 
@@ -33,50 +36,41 @@ export default function RouteMap() {
   const [showLogCreation, setShowLogCreation] = useState(false); // ログ作成モーダルの表示フラグ
   const [showConfirmationModal, setShowConfirmationModal] = useState(false); // 確認モーダルの表示フラグ
   const [markerToNavigate, setMarkerToNavigate] = useState(null); // ナビゲートするマーカー
+  const [newMarkerDescription, setNewMarkerDescription] = useState(""); // 新しいマーカーの説明
 
   // 永続化されたマーカーをロード
   useEffect(() => {
     const loadMarkers = async () => {
       try {
-        const storedMarkers = await AsyncStorage.getItem("markers");
-        let loadedMarkers = storedMarkers ? JSON.parse(storedMarkers) : [];
+        const response = await axios.get('http://10.108.1.172:3000/user_locations'); //一号館
+       // const response = await axios.get('http://10.200.4.200:3000/user_locations');
+        const gpsData = response.data;
 
-        if (gpsData) {
-          // GPSデータからルート座標とマーカーを生成
-          const routeCoords = gpsData.map((point) => ({
-            latitude: point.coordinates.latitude,
-            longitude: point.coordinates.longitude,
-          }));
-          const markersData = gpsData.map((point, index) => ({
-            id: `gps-${index}-${point.coordinates.latitude}-${
-              point.coordinates.longitude
-            }-${new Date(point.timestamp).getTime()}`,
-            coordinate: {
-              latitude: point.coordinates.latitude,
-              longitude: point.coordinates.longitude,
-            },
-            title: `Day ${point.day}`,
-            description: new Date(point.timestamp).toLocaleDateString(),
-          }));
+        const routeCoords = gpsData.map((point) => ({
+          latitude: parseFloat(point.latitude),
+          longitude: parseFloat(point.longitude),
+        }));
 
-          setRouteCoordinates(routeCoords);
+        const markersData = gpsData.map((point, index) => ({
+          id: `gps-${index}-${point.latitude}-${point.longitude}-${new Date(point.visited_at).getTime()}`,
+          coordinate: {
+            latitude: parseFloat(point.latitude),
+            longitude: parseFloat(point.longitude),
+          },
+          title: `Day ${index + 1}`,
+          description: new Date(point.visited_at).toLocaleDateString(),
+        }));
 
-          if (routeCoords.length > 0) {
-            // 初期表示の地図領域を設定
-            setInitialRegion({
-              latitude: routeCoords[0].latitude,
-              longitude: routeCoords[0].longitude,
-              latitudeDelta: 0.02,
-              longitudeDelta: 0.02,
-            });
-          }
-          // 重複を排除してマーカーを設定
-          const allMarkers = [...loadedMarkers, ...markersData];
-          const uniqueMarkers = Array.from(
-            new Map(allMarkers.map((marker) => [marker.id, marker])).values()
-          );
+        setRouteCoordinates(routeCoords);
+        setMarkers(markersData);
 
-          setMarkers(uniqueMarkers);
+        if (routeCoords.length > 0) {
+          setInitialRegion({
+            latitude: routeCoords[0].latitude,
+            longitude: routeCoords[0].longitude,
+            latitudeDelta: 0.02,
+            longitudeDelta: 0.02,
+          });
         }
       } catch (error) {
         console.error("マーカーのロードエラー:", error);
@@ -84,7 +78,11 @@ export default function RouteMap() {
     };
 
     loadMarkers();
-  }, [gpsData, passedRegion]);
+  }, []); // 依存関係を空にして初回のみ実行
+
+  useEffect(() => {
+    console.log("Markers loaded:", markers);
+  }, [markers]);
 
   // マーカーを永続化
   const saveMarkers = async (updatedMarkers) => {
@@ -97,28 +95,30 @@ export default function RouteMap() {
 
   // ピンを追加
   const handleAddNewMarker = () => {
-    if (newMarkerCoordinate && newMarkerTitle) {
+    if (newMarkerCoordinate && newMarkerTitle && newMarkerDescription) {
       const newMarker = {
-        id: Date.now().toString(),
+        id: Date.now().toString(), // 現在のタイムスタンプをIDとして使用
         coordinate: newMarkerCoordinate,
         title: newMarkerTitle,
-        description: new Date().toLocaleDateString(),
+        description: newMarkerDescription,
       };
       const updatedMarkers = [...markers, newMarker];
-      setMarkers(updatedMarkers);
+      setMarkers(updatedMarkers); // 新しいマーカーを追加
       saveMarkers(updatedMarkers); // 永続化
-      setShowNewMarkerInput(false);
-      setNewMarkerTitle("");
-      setNewMarkerCoordinate(null);
+      setShowNewMarkerInput(false); // 入力フィールドを非表示
+      setNewMarkerTitle(""); // タイトルをリセット
+      setNewMarkerDescription(""); // 説明をリセット
+      setNewMarkerCoordinate(null); // 座標をリセット
+      setIsAddingPin(false); // ピン追加モードをオフにする
     }
   };
 
   // 確認モーダルの応答を処理
   const handleConfirmationResponse = (proceed) => {
-    setShowConfirmationModal(false);
+    setShowConfirmationModal(false); // モーダルを非表示
     if (proceed && markerToNavigate) {
-      setSelectedMarker(markerToNavigate);
-      setShowLogCreation(true);
+      setSelectedMarker(markerToNavigate); // ナビゲートするマーカーを選択
+      setShowLogCreation(true); // ログ作成モーダルを表示
     }
   };
 
@@ -131,10 +131,10 @@ export default function RouteMap() {
   // 地図が押されたときの処理
   const handleMapPress = (event) => {
     if (isAddingPin) {
-      setNewMarkerCoordinate(event.nativeEvent.coordinate);
-      setShowNewMarkerInput(true);
-      setIsAddingPin(false);
+      setNewMarkerCoordinate(event.nativeEvent.coordinate); // 新しいマーカーの座標を設定
+      setShowNewMarkerInput(true); // 入力フィールドを表示
     }
+    setSelectedMarker(null); // 選択されたマーカーをクリア
   };
 
   // ピンを削除
@@ -151,9 +151,9 @@ export default function RouteMap() {
               const updatedMarkers = markers.filter(
                 (m) => m.id !== selectedMarker.id
               );
-              setMarkers(updatedMarkers);
-              saveMarkers(updatedMarkers);
-              setSelectedMarker(null);
+              setMarkers(updatedMarkers); // マーカーを削除
+              saveMarkers(updatedMarkers); // 永続化
+              setSelectedMarker(null); // 選択をクリア
             },
             style: "destructive",
           },
@@ -175,10 +175,48 @@ export default function RouteMap() {
   // ピン追加モードを切り替え
   const toggleAddPin = () => {
     setIsAddingPin(!isAddingPin);
+    setShowNewMarkerInput(false);
+    setNewMarkerTitle(""); // タイトルをリセット
+    setNewMarkerDescription(""); // 説明をリセット
+    setNewMarkerCoordinate(null); // 座標をリセット
+  };
+
+  // 例えば、マーカーを選択した後にNewCreateに戻る場合
+  const handleBackToNewCreate = () => {
+    navigation.navigate("NewCreate"); // NewCreate画面に戻る
+  };
+
+  // 保存機能を追加
+  const saveAllData = async () => {
+    try {
+      // 各画面のデータを取得
+      const logCreationData = await AsyncStorage.getItem("logCreationData");
+      const newCreateData = await AsyncStorage.getItem("newCreateData");
+      const gpsConfirmationData = await AsyncStorage.getItem("gpsConfirmationData");
+
+      // データを保存
+      await AsyncStorage.setItem("allData", JSON.stringify({
+        logCreation: logCreationData ? JSON.parse(logCreationData) : {},
+        newCreate: newCreateData ? JSON.parse(newCreateData) : {},
+        gpsConfirmation: gpsConfirmationData ? JSON.parse(gpsConfirmationData) : {},
+      }));
+
+      Alert.alert("保存完了", "すべてのデータが正常に保存されました。");
+
+      // 保存完了後にLogeCreate画面に遷移
+      navigation.navigate("LogeCreate");
+
+    } catch (error) {
+      console.error("データの保存エラー:", error);
+      Alert.alert("保存エラー", "データの保存中にエラーが発生しました。");
+    }
   };
 
   return (
     <View style={styles.container}>
+      <View style={styles.banner}>
+        <Text style={styles.bannerText}>マップ</Text>
+      </View>
       <MapView
         ref={mapRef}
         customMapStyle={mapStyle}
@@ -214,7 +252,7 @@ export default function RouteMap() {
       {selectedMarker && !showConfirmationModal && (
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={handleDeleteMarker} // 削除ボタン
+          onPress={handleDeleteMarker}
         >
           <Trash2 size={24} color="#fff" />
         </TouchableOpacity>
@@ -232,9 +270,16 @@ export default function RouteMap() {
             onChangeText={setNewMarkerTitle}
             placeholder="マーカーの名前を入力"
           />
+          <TextInput
+            style={styles.input}
+            value={newMarkerDescription}
+            onChangeText={setNewMarkerDescription}
+            placeholder="マーカーの説明を入力"
+          />
           <TouchableOpacity
             style={styles.addButton}
             onPress={handleAddNewMarker}
+            activeOpacity={0.7}
           >
             <Plus size={24} color="#fff" />
           </TouchableOpacity>
